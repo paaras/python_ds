@@ -1,0 +1,1724 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Linked Lists</title>
+<style>
+/* Plain slide deck: white page, black text, one blue for whatever is moving */
+:root{
+  --bg:#ffffff; --ink:#111111; --muted:#5f6368; --line:#d6d6d6; --soft:#f4f5f7;
+  --hi:#1556d6; --hi-soft:#e4ecfc; --err:#b3261e; --err-soft:#fbe8e6;
+  --sans:"Helvetica Neue", Helvetica, Arial, sans-serif;
+  --mono:ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  color-scheme:light;
+}
+html{font-size:clamp(15px, 0.9vw + 6px, 22px); height:100%}
+body{background:var(--bg); color:var(--ink); font-family:var(--sans); height:100%; margin:0}
+.deck{height:100%; display:flex; flex-direction:column}
+.stage{flex:1; overflow-y:auto; overflow-x:hidden; padding-inline:16px}
+.slide{display:none; max-width:1280px; margin:0 auto; padding-block:1.6rem 2.5rem}
+.slide.on{display:flex; flex-direction:column; gap:1.1rem}
+h1{font-size:2.3rem; line-height:1.15; margin:0 0 .3rem; font-weight:700; text-wrap:balance}
+ul.pts{margin:0; padding-left:1.2em; font-size:1.2rem; line-height:1.5; max-width:62ch; display:flex; flex-direction:column; gap:.3rem}
+p{margin:0; font-size:1.2rem; line-height:1.5; max-width:62ch}
+code{font-family:var(--mono); font-size:.92em; background:var(--soft); padding:.05em .3em; border-radius:3px}
+.cols{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:1.5rem 2.5rem; align-items:start}
+.cols > *{min-width:0}
+@media (max-width:860px){.cols{grid-template-columns:minmax(0,1fr)}}
+
+pre.code{font-family:var(--mono); font-size:.92rem; line-height:1.55; background:var(--soft); border:1px solid var(--line); border-radius:6px; padding:.7rem 0; margin:0; overflow-x:auto}
+pre.code .ln{display:block; padding:0 1rem; white-space:pre; border-left:4px solid transparent}
+pre.code .ln.on{background:var(--hi-soft); border-left-color:var(--hi)}
+pre.code .ln.edge{background:var(--hi-soft)}
+pre.code .ln.bad{background:var(--err-soft); border-left-color:var(--err)}
+pre.code .kw{font-weight:700}
+pre.code .cm{color:var(--muted); font-style:italic}
+pre.code .st{color:#5b3a00}
+
+button{font:inherit; font-size:.95rem; border:1.5px solid var(--ink); background:var(--bg); color:var(--ink); border-radius:5px; padding:.35em .85em; cursor:pointer}
+button.pri{background:var(--ink); color:var(--bg)}
+button:disabled{opacity:.35; cursor:default}
+button.sel{background:var(--ink); color:var(--bg)}
+button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible{outline:3px solid var(--hi); outline-offset:2px}
+input[type=number]{font:inherit; font-size:.95rem; width:4.5em; padding:.3em .4em; border:1.5px solid var(--ink); border-radius:5px; background:var(--bg); color:var(--ink)}
+input[type=range]{accent-color:var(--ink); width:12rem; max-width:100%}
+.row{display:flex; flex-wrap:wrap; align-items:center; gap:.6rem}
+.row label{font-size:1rem}
+.mut{color:var(--muted)}
+.small{font-size:.95rem}
+
+/* step player */
+.pl{display:grid; grid-template-columns:minmax(0,max-content) minmax(0,1fr); gap:1rem 2rem; align-items:start}
+.pl.stack{grid-template-columns:minmax(0,1fr)}
+@media (max-width:860px){.pl{grid-template-columns:minmax(0,1fr)}}
+.pl-side{display:flex; flex-direction:column; gap:.7rem; min-width:0}
+.pl-ctl{display:flex; flex-wrap:wrap; gap:.45rem; align-items:center}
+.pl-count{font-size:.9rem; color:var(--muted); font-variant-numeric:tabular-nums; margin-left:.3rem}
+.pl-note{font-size:1.2rem; line-height:1.45; min-height:3.2em}
+.pl-watch{font-family:var(--mono); font-size:1.05rem; display:flex; gap:1.5rem; flex-wrap:wrap}
+.pl-watch:empty{display:none}
+.pl-out .lbl, .lbl{font-size:.8rem; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin-bottom:.2rem}
+.pl-out pre, pre.out{font-family:var(--mono); font-size:.95rem; margin:0; padding:.5rem .75rem; border:1px solid var(--line); border-radius:6px; min-height:1.6em; white-space:pre-wrap}
+.pl-dia{overflow-x:auto}
+svg.dia{display:block; max-width:100%; height:auto}
+.err{color:var(--err)}
+
+/* diagram */
+.nb{fill:var(--bg); stroke:var(--ink); stroke-width:2}
+.nb.hl{stroke:var(--hi); stroke-width:4}
+.ndiv{stroke:var(--ink); stroke-width:2}
+.nd{font:600 24px var(--sans); fill:var(--ink)}
+.nn{font:13px var(--mono); fill:var(--muted)}
+.ed{stroke:var(--ink); stroke-width:2; fill:none}
+.dot{fill:var(--ink)}
+.vl{font:17px var(--mono); fill:var(--ink)}
+.vl.mv{fill:var(--hi); font-weight:700}
+.va{stroke:var(--ink); stroke-width:2}
+.va.mv{stroke:var(--hi)}
+.ob{fill:var(--soft); stroke:var(--ink); stroke-width:2}
+.ot{font:17px var(--mono); fill:var(--ink)}
+.none{font:16px var(--mono); fill:var(--muted)}
+g.clk{cursor:pointer}
+
+/* tables */
+table.t{border-collapse:collapse; font-size:1.05rem}
+table.t th, table.t td{border-bottom:1px solid var(--line); padding:.45rem .9rem; text-align:left; vertical-align:top}
+table.t th{font-size:.8rem; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); font-weight:600}
+table.t td.num{font-variant-numeric:tabular-nums}
+.tw{overflow-x:auto}
+tr.pick{cursor:pointer}
+tr.pick:hover td{background:var(--soft)}
+tr.pick.on td{background:var(--hi-soft)}
+
+/* edge-case grid */
+.grid4{display:grid; grid-template-columns:8.5rem repeat(4, minmax(7.5rem, 1fr)); gap:.4rem; min-width:42rem}
+.grid4 .h{font-size:.8rem; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); align-self:end; padding:.2rem}
+.grid4 .rh{font-weight:600; align-self:center}
+.cell{border:1.5px solid var(--line); border-radius:6px; padding:.45rem .55rem; text-align:left; background:var(--bg); font-size:.92rem; display:flex; flex-direction:column; gap:.15rem}
+.cell code{background:none; padding:0}
+.cell.on{border-color:var(--hi); box-shadow:0 0 0 2px var(--hi) inset}
+.cell .stt{font-weight:700}
+.cell.crash .stt{color:var(--err)}
+.cell.na{color:var(--muted); border-style:dashed; cursor:default}
+
+/* editors */
+textarea.ed{width:100%; box-sizing:border-box; font-family:var(--mono); font-size:.9rem; line-height:1.5; border:1.5px solid var(--ink); border-radius:6px; padding:.6rem .8rem; white-space:pre; overflow:auto; resize:vertical; tab-size:4; background:var(--bg); color:var(--ink)}
+.tabs{display:flex; flex-wrap:wrap; gap:.45rem}
+
+/* nav */
+.nav{border-top:1px solid var(--line); display:flex; align-items:center; gap:.6rem; padding:.45rem 16px calc(.45rem + env(safe-area-inset-bottom, 0px))}
+.nav .cnt{font-variant-numeric:tabular-nums; font-size:.95rem; min-width:4.5em; text-align:center}
+.nav .ttl{flex:1; text-align:right; font-size:.85rem; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.chart text{font:13px var(--sans); fill:var(--muted)}
+.chart .ax{stroke:var(--line)}
+.chart .ln0{stroke:#c8c8c8; stroke-width:2; fill:none}
+.chart .ln1{stroke:var(--hi); stroke-width:3.5; fill:none}
+.chart .lb1{fill:var(--hi); font-weight:700}
+.chart .lb0{fill:#9a9a9a}
+.howto{display:grid; grid-template-columns:max-content minmax(0,1fr); gap:.8rem 1rem; align-items:center; font-size:1.2rem; max-width:62ch}
+.howto > div{display:contents}
+.howto > div > span:first-child{justify-self:start}
+.key{display:inline-block; min-width:2.2em; text-align:center; border:1.5px solid var(--ink); border-radius:5px; padding:.15em .6em; font-size:1.15rem; font-weight:700}
+.key.pri{background:var(--ink); color:var(--bg)}
+.stat{display:grid; grid-template-columns:max-content max-content; gap:.3rem 1.5rem; font-size:1.15rem}
+.stat b{font-variant-numeric:tabular-nums}
+@media (prefers-reduced-motion: reduce){*{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#111111"/></marker>
+    <marker id="ahb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1556d6"/></marker>
+  </defs>
+</svg>
+
+<div class="deck">
+<main class="stage" id="stage">
+
+<!-- 0 -->
+<section class="slide" data-title="Start">
+  <h1>Linked Lists</h1>
+  <div class="pl-dia"><svg class="dia" id="s0dia"></svg></div>
+  <p>I'm trying something new this week. Videos are hard to look back through, so this lesson is a set of interactive slides instead.</p>
+  <div class="howto">
+    <div><span><span class="key">&larr;</span> <span class="key">&rarr;</span></span><span>Move between slides</span></div>
+    <div><span class="key pri">Step</span><span>Run the code one line at a time</span></div>
+    <div><span class="key">Play</span><span>Run the code on its own, press again to pause</span></div>
+  </div>
+</section>
+
+<!-- 1 -->
+<section class="slide" data-title="Loose nodes">
+  <h1>Loose nodes are hard to manage</h1>
+  <div class="cols">
+    <div style="display:flex;flex-direction:column;gap:1rem">
+      <ul class="pts">
+        <li>Last week we linked nodes by hand, with one variable per node</li>
+        <li>To add a node at the end, you have to know which variable holds the last node</li>
+        <li>With 100 nodes you would need 100 variables</li>
+      </ul>
+      <div class="row"><button class="pri" id="s1add">Add a node</button><span class="mut" id="s1count"></span></div>
+    </div>
+    <pre class="code" id="s1code"></pre>
+  </div>
+  <div class="pl-dia"><svg class="dia" id="s1dia"></svg></div>
+  <p>We want something that keeps track of the nodes for us</p>
+</section>
+
+<!-- 2 -->
+<section class="slide" data-title="The head">
+  <h1>A LinkedList only needs to remember the head</h1>
+  <div class="cols">
+    <ul class="pts">
+      <li>If you have the first node, you can reach every other node by following <code>next</code></li>
+      <li>So the LinkedList stores only a reference to the first node, called <code>head</code></li>
+    </ul>
+    <pre class="code" id="s2code"></pre>
+  </div>
+  <div class="pl-dia"><svg class="dia" id="s2dia"></svg></div>
+  <div><div class="lbl">Click a node to see how to reach it</div><pre class="out" id="s2out">Click any node</pre></div>
+</section>
+
+<!-- 3 -->
+<section class="slide" data-title="Empty list">
+  <h1>An empty list has head = None</h1>
+  <div class="cols">
+    <ul class="pts">
+      <li>A new LinkedList has no nodes, so <code>head</code> points to nothing</li>
+      <li>Almost every method has to handle this case first, usually with <code>if self.head is None:</code></li>
+    </ul>
+    <div style="display:flex;flex-direction:column;gap:.6rem">
+      <pre class="code" id="s3code"></pre>
+      <div><div class="lbl">Output</div><pre class="out">None</pre></div>
+    </div>
+  </div>
+  <div class="pl-dia"><svg class="dia" id="s3dia"></svg></div>
+</section>
+
+<!-- 4 -->
+<section class="slide" data-title="Traversal">
+  <h1>Traversal: visiting every node</h1>
+  <ul class="pts">
+    <li>Start at the head and follow <code>next</code> until you reach <code>None</code></li>
+    <li><code>current</code> does the moving. <code>self.head</code> stays on the first node the whole time.</li>
+  </ul>
+  <div id="s4pl"></div>
+</section>
+
+<!-- 5 -->
+<section class="slide" data-title="Moving head">
+  <h1>Moving head instead of current loses the list</h1>
+  <ul class="pts">
+    <li>This version prints the same values, but it uses <code>self.head</code> as the moving variable</li>
+    <li>A node that nothing points to is gone. Python frees its memory.</li>
+  </ul>
+  <div id="s5pl"></div>
+</section>
+
+<!-- 6 -->
+<section class="slide" data-title="Length">
+  <h1>Counting the nodes</h1>
+  <ul class="pts">
+    <li>The same traversal, with a counter that goes up once per node</li>
+    <li>Try an empty list. The loop never runs and <code>count</code> stays 0.</li>
+  </ul>
+  <div class="row" id="s6sc"></div>
+  <div id="s6pl"></div>
+</section>
+
+<!-- 7 -->
+<section class="slide" data-title="Prepend">
+  <h1>Adding to the front (prepend)</h1>
+  <ul class="pts">
+    <li>Point the new node at the current first node, then point <code>head</code> at the new node</li>
+    <li>Two assignments, no matter how long the list is</li>
+    <li>On an empty list, <code>new_node.next</code> becomes <code>None</code>, which is correct. No special case needed.</li>
+  </ul>
+  <div class="row" id="s7sc"></div>
+  <div id="s7pl"></div>
+</section>
+
+<!-- 8 -->
+<section class="slide" data-title="Order matters">
+  <h1>Watch Out!</h1>
+  <ul class="pts">
+    <li>If <code>head</code> moves first, nothing points to the old first node anymore</li>
+    <li>Then <code>new_node.next = self.head</code> makes the new node point at itself</li>
+  </ul>
+  <div class="row"><button id="s8ok" class="sel">Correct order</button><button id="s8bad">Wrong order</button></div>
+  <div id="s8pl"></div>
+</section>
+
+<!-- 9 -->
+<section class="slide" data-title="Append">
+  <h1>Adding to the end (append)</h1>
+  <ul class="pts">
+    <li>Walk to the last node, the one whose <code>next</code> is <code>None</code>, then attach the new node</li>
+    <li>The loop checks <code>current.next</code> so it stops on the last node. Checking <code>current</code> would walk past it to <code>None</code>.</li>
+    <li>An empty list has no last node, so the new node becomes the head</li>
+  </ul>
+  <div class="row" id="s9sc"></div>
+  <div id="s9pl"></div>
+</section>
+
+<!-- 10 -->
+<section class="slide" data-title="Search">
+  <h1>Searching for a value</h1>
+  <ul class="pts">
+    <li>Visit each node and compare its data with the target</li>
+    <li>Return <code>True</code> as soon as you find it. If <code>current</code> reaches <code>None</code>, the value is not in the list.</li>
+  </ul>
+  <div class="row" id="s10sc"></div>
+  <div id="s10pl"></div>
+</section>
+
+<!-- 11 -->
+<section class="slide" data-title="Insert">
+  <h1>Inserting at a position</h1>
+  <ul class="pts">
+    <li>Walk to the node before the position, then link the new node in</li>
+    <li>Link the new node to the rest of the list first, then attach it. This is the same order rule as prepend.</li>
+    <li>Index 0 has no node before it, so it uses prepend</li>
+    <li>An index past the end prints a message and leaves the list alone</li>
+  </ul>
+  <div class="row" id="s11sc"></div>
+  <div id="s11pl"></div>
+</section>
+
+<!-- 12 -->
+<section class="slide" data-title="Remove first">
+  <h1>Removing the first node</h1>
+  <ul class="pts">
+    <li>Move <code>head</code> to the second node</li>
+    <li>Once the method returns, nothing points to the old first node, so Python frees it</li>
+    <li>An empty list has nothing to remove, so print a message and return</li>
+  </ul>
+  <div class="row" id="s12sc"></div>
+  <div id="s12pl"></div>
+</section>
+
+<!-- 13 -->
+<section class="slide" data-title="Remove a value">
+  <h1>Removing a value</h1>
+  <ul class="pts">
+    <li>To skip a node, change the <code>next</code> of the node before it with <code>prev.next = current.next</code></li>
+    <li>So the loop keeps two variables, with <code>prev</code> one step behind <code>current</code></li>
+    <li>If the target is the first node there is no <code>prev</code>. Move <code>head</code> instead.</li>
+    <li>If <code>current</code> reaches <code>None</code>, the value is not in the list</li>
+  </ul>
+  <div class="row" id="s13sc"></div>
+  <div id="s13pl"></div>
+</section>
+
+<!-- 14 -->
+<section class="slide" data-title="Edge cases">
+  <h1>Edge Cases</h1>
+  <ul class="pts">
+    <li>An empty list, a list with one node, a change to the first node, a change to the last node</li>
+    <li>Most linked list bugs only show up in one of these cases</li>
+  </ul>
+  <div class="row"><button id="s14naive" class="sel">Methods without edge checks</button><button id="s14care">Methods with edge checks</button></div>
+  <div class="tw"><div class="grid4" id="s14grid"></div></div>
+  <div class="cols">
+    <pre class="code" id="s14code"></pre>
+    <div style="display:flex;flex-direction:column;gap:.6rem" id="s14detail"></div>
+  </div>
+</section>
+
+<!-- 15 -->
+<section class="slide" data-title="Common errors">
+  <h1>Common Errors</h1>
+  <div class="tabs" id="s15tabs"></div>
+  <p id="s15desc"></p>
+  <div class="cols">
+    <div style="display:flex;flex-direction:column;gap:.5rem">
+      <textarea class="ed" id="s15ed" spellcheck="false" rows="16" aria-label="Python code"></textarea>
+      <div class="mut small">Node is already defined, the same as last week</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:.6rem">
+      <div class="row"><button class="pri" id="s15run">Run</button><button id="s15fix">Show a fix</button></div>
+      <div><div class="lbl">Output</div><pre class="out" id="s15out">Press Run</pre></div>
+      <p id="s15hint" class="small" hidden></p>
+    </div>
+  </div>
+</section>
+
+<!-- 16 -->
+<section class="slide" data-title="Time complexity">
+  <h1>Counting steps</h1>
+  <ul class="pts">
+    <li>Time complexity describes how the number of steps grows as the list grows</li>
+    <li><code>n</code> is the number of nodes, and here a step is one line of code run</li>
+    <li>A method that walks the list takes more steps on a longer list. A method that only touches <code>head</code> takes the same steps every time.</li>
+  </ul>
+  <div class="row" id="s16sc"></div>
+  <div id="s16pl"></div>
+  <div>
+    <div class="tw"><table class="t" id="s16tab"><thead><tr><th>n</th><th>prepend</th><th>append</th></tr></thead><tbody></tbody></table><p class="small mut" style="margin-top:.6rem">Lines run for lists of different sizes</p></div>
+  </div>
+</section>
+
+<!-- 17 -->
+<section class="slide" data-title="Time per method">
+  <h1>Time complexity</h1>
+  <div class="tw"><table class="t" id="s17t"><thead><tr><th>Method</th><th>Time</th><th>Why</th></tr></thead><tbody></tbody></table></div>
+</section>
+
+<!-- 18 -->
+<section class="slide" data-title="Space complexity">
+  <h1>Space complexity: O(n)</h1>
+  <ul class="pts">
+    <li>Every item needs its own node, and every node stores two things, <code>data</code> and <code>next</code></li>
+    <li><code>n</code> items take <code>n</code> nodes, so memory grows in a straight line with <code>n</code></li>
+    <li>The methods themselves use O(1) extra space. <code>current</code>, <code>prev</code> and <code>new_node</code> are a few variables, however long the list is.</li>
+  </ul>
+  <div class="row"><button class="pri" id="s18add">Add a node</button></div>
+  <div class="pl-dia"><svg class="dia" id="s18dia"></svg></div>
+  <div class="stat" id="s18stat"></div>
+</section>
+
+<!-- 19 -->
+<section class="slide" data-title="Tail reference">
+  <h1>Keeping a tail reference</h1>
+  <ul class="pts">
+    <li>Store <code>self.tail</code> as well, pointing at the last node</li>
+    <li><code>append</code> no longer needs to walk, so it goes from O(n) to O(1)</li>
+    <li>The cost is that every method that changes the last node now has to keep <code>self.tail</code> correct, including <code>prepend</code> on an empty list and <code>remove</code> of the last node</li>
+  </ul>
+  <div class="pl-ctl" id="s19ctl"><button id="s19back">Back</button><button class="pri" id="s19step">Step</button><button id="s19play">Play</button><span class="pl-count" id="s19count"></span></div>
+  <div class="cols">
+    <div><div class="lbl">Without tail</div><div id="s19a"></div></div>
+    <div><div class="lbl">With tail</div><div id="s19b"></div></div>
+  </div>
+</section>
+
+<!-- 20 -->
+<section class="slide" data-title="Playground">
+  <h1>Playground</h1>
+  <p>Edit any method, then call it with the buttons. The diagram shows the list after each call.</p>
+  <div class="cols" style="grid-template-columns:minmax(0,1fr) minmax(0,1.05fr)">
+    <div style="display:flex;flex-direction:column;gap:.5rem">
+      <textarea class="ed" id="pgEd" spellcheck="false" style="height:62vh" aria-label="LinkedList code"></textarea>
+      <div class="row"><button id="pgResetCode">Reset code</button></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:.8rem">
+      <div class="row"><label for="pgV">Value</label><input type="number" id="pgV" value="5"></div>
+      <div class="row" id="pgBtns"></div>
+      <div class="row"><button id="pgResetList">Reset the list</button><span class="mut small" id="pgStatus"></span></div>
+      <div class="pl-dia"><svg class="dia" id="pgDia"></svg></div>
+      <div><div class="lbl">Console</div><pre class="out" id="pgOut" style="max-height:30vh;overflow:auto"></pre></div>
+    </div>
+  </div>
+</section>
+
+</main>
+<nav class="nav" aria-label="Slides">
+  <button id="prev" aria-label="Previous slide">&larr;</button>
+  <span class="cnt" id="cnt">1 / 21</span>
+  <button id="next" aria-label="Next slide">&rarr;</button>
+  <button id="fs">Fullscreen</button>
+  <span class="ttl" id="ttl"></span>
+</nav>
+</div>
+
+<script>
+(() => {
+'use strict';
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const clone = o => JSON.parse(JSON.stringify(o));
+const lerp = (a,b,t) => a + (b-a)*t;
+const ease = t => t<.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2;
+let UID = 0;
+const MOVERS = new Set(['current','prev','new_node','removed']);
+const KEEP = new Set(['self.head','self.tail']);
+
+/* ---------- code display ---------- */
+const KW = /\b(def|class|while|if|else|elif|return|for|in|not|is|None|True|False|raise|and|or|pass)\b/g;
+function hlLine(line){
+  let code = line, cm = '';
+  const h = line.indexOf('#');
+  if (h >= 0 && (line.slice(0,h).split('"').length % 2 === 1)) { code = line.slice(0,h); cm = line.slice(h); }
+  const parts = code.split(/("[^"]*")/);
+  const out = parts.map((p,i) => i%2 ? '<span class="st">'+esc(p)+'</span>' : esc(p).replace(KW,'<span class="kw">$1</span>')).join('');
+  return out + (cm ? '<span class="cm">'+esc(cm)+'</span>' : '');
+}
+function renderCode(pre, text, marks={}){
+  pre.innerHTML = text.split('\n').map((l,i) => {
+    const c = marks[i+1] ? ' '+marks[i+1] : '';
+    return '<span class="ln'+c+'">'+(hlLine(l)||' ')+'</span>';
+  }).join('');
+}
+
+/* ---------- list state ---------- */
+function mk(values, o={}){
+  const s = {nodes:{}, vars:{}, hl:{}};
+  let prev = null, first = null;
+  values.forEach((v,i) => {
+    const id = 'n'+(++UID);
+    s.nodes[id] = {data:v, next:null, col:i, row:0};
+    if (prev) s.nodes[prev].next = id; else first = id;
+    prev = id;
+  });
+  if (!o.noHead) s.vars['self.head'] = first;
+  if (o.tail) s.vars['self.tail'] = prev;
+  if (o.obj) s.obj = o.obj;
+  return s;
+}
+function chainIds(s){
+  const out = [], seen = new Set();
+  let c = s.vars['self.head'];
+  while (c != null && !seen.has(c)) { seen.add(c); out.push(c); c = s.nodes[c].next; }
+  return out;
+}
+function relayout(s){ chainIds(s).forEach((id,i) => { s.nodes[id].col = i; s.nodes[id].row = 0; }); }
+function reach(s){
+  const r = new Set();
+  for (const k in s.vars) { let c = s.vars[k]; while (c != null && !r.has(c)) { r.add(c); c = s.nodes[c].next; } }
+  return r;
+}
+function clean(s){
+  s = clone(s);
+  const r = reach(s);
+  for (const id in s.nodes) if (!r.has(id)) delete s.nodes[id];
+  for (const k in s.vars) if (!KEEP.has(k)) delete s.vars[k];
+  s.hl = {};
+  relayout(s);
+  return s;
+}
+const valsOf = s => chainIds(s).map(id => s.nodes[id].data);
+
+/* ---------- diagram ---------- */
+const G = {NW:116, DW:64, NH:54, SPX:152, TOP:86, RG:150, PX:22};
+function nullCol(s, name){
+  const cols = Object.values(s.nodes).filter(n => n.row === 0).map(n => n.col);
+  if (name === 'prev') return (cols.length ? Math.min(...cols) : 0) - 1;
+  return cols.length ? Math.max(...cols) + 1 : 0;
+}
+function boundsOf(states, o={}){
+  let a = 0, b = 0, r = o.rows ? o.rows-1 : 0;
+  for (const s of states) {
+    for (const n of Object.values(s.nodes)) { a = Math.min(a,n.col); b = Math.max(b,n.col); r = Math.max(r,n.row); }
+    for (const k in s.vars) if (s.vars[k] == null && !(s.obj && k === 'self.head')) { const c = nullCol(s,k); a = Math.min(a,c); b = Math.max(b,c); }
+    if (s.obj) a = Math.min(a,-1);
+  }
+  const span = o.span ?? 3;
+  if (b - a < span) b = a + span;
+  return {minCol:a, maxCol:b, maxRow:r};
+}
+function geo(b){
+  return {
+    x: c => G.PX + (c - b.minCol) * G.SPX,
+    y: r => G.TOP + r * G.RG,
+    w: G.PX*2 + (b.maxCol - b.minCol) * G.SPX + G.NW,
+    h: G.TOP + b.maxRow * G.RG + G.NH + (b.maxRow > 0 ? 66 : 30)
+  };
+}
+const VORDER = k => k==='self.head'?0 : k==='self.tail'?1 : /^n\d+$/.test(k)?2 : k==='prev'?3 : k==='removed'?4 : k==='current'?5 : 6;
+function layoutOf(s, g){
+  const P = {}, O = {}, V = {}, slots = new Set(), r = reach(s);
+  for (const id in s.nodes) { const n = s.nodes[id]; P[id] = {x:g.x(n.col), y:g.y(n.row)}; O[id] = r.has(id) ? 1 : 0.22; }
+  const groups = {};
+  const names = Object.keys(s.vars).filter(k => !(s.obj && k === 'self.head')).sort((a,b) => VORDER(a)-VORDER(b));
+  for (const k of names) {
+    const t = s.vars[k];
+    let cx, top, row, key, isNull = t == null;
+    if (isNull) { const c = nullCol(s,k); cx = g.x(c) + G.NW/2; top = g.y(0); row = 0; key = 'null'+c; slots.add(c); }
+    else { const n = s.nodes[t]; cx = g.x(n.col) + G.NW/2; top = g.y(n.row); row = n.row; key = t; }
+    const ki = (groups[key] = (groups[key] || 0) + 1) - 1;
+    const mv = MOVERS.has(k);
+    if (row === 0) V[k] = {x:cx, ty:top-30-ki*21, a1:top-24, a2:isNull ? top+12 : top-3, arrow:ki===0, mv};
+    else { const bot = top + G.NH; V[k] = {x:cx, ty:bot+40+ki*21, a1:bot+20, a2:bot+3, arrow:ki===0, mv}; }
+  }
+  return {P, O, V, slots:[...slots]};
+}
+function draw(svg, s, F, g, clickable){
+  let h = '';
+  for (const c of F.slots) h += `<text class="none" x="${g.x(c)+G.NW/2}" y="${g.y(0)+G.NH/2+5}" text-anchor="middle">None</text>`;
+  if (s.obj) {
+    const x = g.x(-1), y = g.y(0);
+    h += `<text class="ot" x="${x+G.NW/2}" y="${y-12}" text-anchor="middle" font-weight="700">${esc(s.obj)}</text>`;
+    h += `<rect class="ob" x="${x}" y="${y}" width="${G.NW}" height="${G.NH}" rx="4"/>`;
+    h += `<text class="ot" x="${x+14}" y="${y+G.NH/2+5}">head</text>`;
+    const t = s.vars['self.head'];
+    if (t == null) h += `<text class="none" x="${x+G.NW-14}" y="${y+G.NH/2+5}" text-anchor="end">None</text>`;
+    else if (F.P[t]) {
+      const sx = x+G.NW-22, sy = y+G.NH/2, q = F.P[t];
+      h += `<circle class="dot" cx="${sx}" cy="${sy}" r="4"/><path class="ed" marker-end="url(#ah)" d="M${sx} ${sy} L${q.x-2} ${q.y+G.NH/2}"/>`;
+    }
+  }
+  // nodes
+  for (const id in s.nodes) {
+    const p = F.P[id]; if (!p) continue;
+    const n = s.nodes[id];
+    h += `<g data-id="${id}" opacity="${F.O[id].toFixed(3)}"${clickable?' class="clk"':''}>`
+      + `<rect class="nb${s.hl[id]?' hl':''}" x="${p.x}" y="${p.y}" width="${G.NW}" height="${G.NH}" rx="4"/>`
+      + `<line class="ndiv" x1="${p.x+G.DW}" y1="${p.y}" x2="${p.x+G.DW}" y2="${p.y+G.NH}"/>`
+      + `<text class="nd" x="${p.x+G.DW/2}" y="${p.y+G.NH/2+7}" text-anchor="middle">${esc(n.data)}</text></g>`;
+  }
+  // next arrows
+  for (const id in s.nodes) {
+    const p = F.P[id]; if (!p) continue;
+    const n = s.nodes[id], op = F.O[id].toFixed(3);
+    const sx = p.x + G.DW + (G.NW-G.DW)/2, sy = p.y + G.NH/2;
+    if (n.next == null) { h += `<text class="nn" x="${sx}" y="${sy+5}" text-anchor="middle" opacity="${op}">None</text>`; continue; }
+    const q = F.P[n.next]; if (!q) continue;
+    const tx = q.x - 1, ty = q.y + G.NH/2;
+    let d;
+    if (n.next === id) d = `M${sx} ${sy} C${sx+70} ${sy-115},${p.x-70} ${sy-115},${p.x-1} ${sy}`;
+    else if (Math.abs(ty-sy) < 1 && tx > sx) d = `M${sx} ${sy} L${tx} ${ty}`;
+    else if (Math.abs(ty-sy) < 1) d = `M${sx} ${sy} C${sx+70} ${sy+100},${tx-70} ${ty+100},${tx} ${ty}`;
+    else d = `M${sx} ${sy} C${sx+75} ${sy},${tx-75} ${ty},${tx} ${ty}`;
+    h += `<g opacity="${op}"><circle class="dot" cx="${sx}" cy="${sy}" r="4"/><path class="ed" marker-end="url(#ah)" d="${d}"/></g>`;
+  }
+  // variable labels
+  for (const k in F.V) {
+    const v = F.V[k];
+    h += `<text class="vl${v.mv?' mv':''}" x="${v.x}" y="${v.ty}" text-anchor="middle">${esc(k)}</text>`;
+    if (v.arrow) h += `<line class="va${v.mv?' mv':''}" marker-end="url(#${v.mv?'ahb':'ah'})" x1="${v.x}" y1="${v.a1}" x2="${v.x}" y2="${v.a2}"/>`;
+  }
+  svg.innerHTML = h;
+}
+class Diagram {
+  constructor(svg, o={}){
+    this.svg = svg; this.o = o; this.F = null; this.raf = 0; this.b = null;
+    if (o.onClick) svg.addEventListener('click', e => { const t = e.target.closest('[data-id]'); if (t) o.onClick(t.dataset.id); });
+  }
+  setBounds(b){
+    const same = this.b && b.minCol===this.b.minCol && b.maxCol===this.b.maxCol && b.maxRow===this.b.maxRow;
+    if (same) return false;
+    this.b = b; this.g = geo(b);
+    this.svg.setAttribute('viewBox', `0 0 ${this.g.w} ${this.g.h}`);
+    this.svg.style.width = this.g.w + 'px';
+    this.F = null;
+    return true;
+  }
+  show(s, anim=true){
+    if (!this.b) this.setBounds(boundsOf([s], this.o));
+    const T = layoutOf(s, this.g);
+    cancelAnimationFrame(this.raf);
+    const A = this.F;
+    if (!anim || !A || REDUCED) { this.F = T; draw(this.svg, s, T, this.g, !!this.o.onClick); return; }
+    const t0 = performance.now(), D = 520;
+    const frame = now => {
+      const k = Math.min(1, (now - t0) / D), e = ease(k);
+      const F = {P:{}, O:{}, V:{}, slots:T.slots};
+      for (const id in T.P) {
+        const a = A.P[id] || {x:T.P[id].x, y:T.P[id].y+28}, b = T.P[id];
+        F.P[id] = {x:lerp(a.x,b.x,e), y:lerp(a.y,b.y,e)};
+        F.O[id] = lerp(A.O[id] ?? 0, T.O[id], e);
+      }
+      for (const v in T.V) {
+        const a = A.V[v] || T.V[v], b = T.V[v];
+        F.V[v] = {...b, x:lerp(a.x,b.x,e), ty:lerp(a.ty,b.ty,e), a1:lerp(a.a1,b.a1,e), a2:lerp(a.a2,b.a2,e)};
+      }
+      draw(this.svg, s, F, this.g, !!this.o.onClick);
+      this.F = F;
+      if (k < 1) this.raf = requestAnimationFrame(frame); else this.F = T;
+    };
+    this.raf = requestAnimationFrame(frame);
+  }
+}
+
+/* ---------- step recorder ---------- */
+class Rec {
+  constructor(s){ this.s = clone(s); this.s.hl = {}; this.steps = []; this.out = []; this.watch = {}; }
+  get v(){ return this.s.vars; }
+  n(id){ return this.s.nodes[id]; }
+  push(line, note){ this.steps.push({state:clone(this.s), line, note, out:this.out.slice(), watch:Object.assign({}, this.watch)}); }
+  node(data, col, row){ const id = 'n'+(++UID); this.s.nodes[id] = {data, next:null, col, row}; return id; }
+  finish(note, o={}){
+    if (o.before) o.before(this.s);
+    for (const k in this.s.vars) if (!KEEP.has(k)) delete this.s.vars[k];
+    this.watch = {};
+    if (o.layout !== false) relayout(this.s);
+    this.push(null, note);
+    return this.steps;
+  }
+}
+const lenOf = s => chainIds(s).length;
+
+/* ---------- algorithms as step generators ---------- */
+const CODE = {
+traverse:
+`def print_all(self):
+    current = self.head
+    while current is not None:
+        print(current.data)
+        current = current.next`,
+badTraverse:
+`def print_all(self):
+    while self.head is not None:
+        print(self.head.data)
+        self.head = self.head.next`,
+length:
+`def length(self):
+    count = 0
+    current = self.head
+    while current is not None:
+        count += 1
+        current = current.next
+    return count`,
+prepend:
+`def prepend(self, data):
+    new_node = Node(data)
+    new_node.next = self.head
+    self.head = new_node`,
+prependBad:
+`def prepend(self, data):
+    new_node = Node(data)
+    self.head = new_node
+    new_node.next = self.head`,
+append:
+`def append(self, data):
+    new_node = Node(data)
+    if self.head is None:
+        self.head = new_node
+        return
+    current = self.head
+    while current.next is not None:
+        current = current.next
+    current.next = new_node`,
+contains:
+`def contains(self, target):
+    current = self.head
+    while current is not None:
+        if current.data == target:
+            return True
+        current = current.next
+    return False`,
+insert:
+`def insert(self, index, data):
+    if index == 0:
+        self.prepend(data)
+        return
+    current = self.head
+    position = 0
+    while current is not None and position < index - 1:
+        current = current.next
+        position += 1
+    if current is None:
+        print("Index out of range")
+        return
+    new_node = Node(data)
+    new_node.next = current.next
+    current.next = new_node`,
+removeFirst:
+`def remove_first(self):
+    if self.head is None:
+        print("The list is empty")
+        return
+    removed = self.head
+    self.head = self.head.next
+    return removed.data`,
+remove:
+`def remove(self, target):
+    prev = None
+    current = self.head
+    while current is not None:
+        if current.data == target:
+            if prev is None:
+                self.head = current.next
+            else:
+                prev.next = current.next
+            return
+        prev = current
+        current = current.next
+    print("Value not in list")`,
+appendTail:
+`def append(self, data):
+    new_node = Node(data)
+    if self.head is None:
+        self.head = new_node
+        self.tail = new_node
+        return
+    self.tail.next = new_node
+    self.tail = new_node`
+};
+
+const GEN = {
+traverse(s0){
+  const r = new Rec(s0);
+  r.push(1, 'Calling my_list.print_all()');
+  r.v.current = r.v['self.head'];
+  r.push(2, r.v.current ? 'current starts at the first node' : 'The list is empty, so current is None');
+  for (;;) {
+    const c = r.v.current;
+    if (c == null) { r.push(3, 'current is None, so the loop stops'); break; }
+    r.push(3, 'current is a node, so the loop body runs');
+    r.out.push(String(r.n(c).data)); r.push(4, 'Print '+r.n(c).data);
+    r.v.current = r.n(c).next;
+    r.push(5, r.v.current ? 'current moves to the next node' : 'current moves to None, past the last node');
+  }
+  return r.finish('Done. Every node was visited once, and self.head never moved.');
+},
+badTraverse(s0){
+  const r = new Rec(s0);
+  r.push(1, 'Calling my_list.print_all()');
+  for (;;) {
+    const c = r.v['self.head'];
+    if (c == null) { r.push(2, 'self.head is None, so the loop stops'); break; }
+    r.push(2, 'self.head is a node, so the loop body runs');
+    r.out.push(String(r.n(c).data)); r.push(3, 'Print '+r.n(c).data);
+    r.v['self.head'] = r.n(c).next;
+    r.push(4, 'self.head moves forward. Nothing points to the node it left behind.');
+  }
+  return r.finish('Every value was printed, but self.head is now None. The nodes are gone and the list is empty.', {layout:false});
+},
+length(s0){
+  const r = new Rec(s0);
+  r.push(1, 'Calling my_list.length()');
+  r.watch.count = 0; r.push(2, 'Start the count at 0');
+  r.v.current = r.v['self.head'];
+  r.push(3, r.v.current ? 'current starts at the first node' : 'The list is empty, so current is None');
+  for (;;) {
+    const c = r.v.current;
+    if (c == null) { r.push(4, 'current is None, so the loop stops'); break; }
+    r.push(4, 'current is a node, so the loop body runs');
+    r.watch.count++; r.push(5, 'count goes up to '+r.watch.count);
+    r.v.current = r.n(c).next; r.push(6, r.v.current ? 'current moves to the next node' : 'current moves to None');
+  }
+  r.out.push('length() returned '+r.watch.count);
+  r.push(7, 'Return '+r.watch.count);
+  return r.finish('The list has '+lenOf(r.s)+(lenOf(r.s)===1?' node':' nodes'));
+},
+prepend(s0, x){
+  const r = new Rec(s0);
+  r.push(1, `Calling prepend(${x})`);
+  const id = r.node(x, -1, 1); r.v.new_node = id;
+  r.push(2, 'Create the new node. It is not part of the list yet.');
+  const h = r.v['self.head'];
+  r.n(id).next = h;
+  r.push(3, h ? 'The new node points at the current first node' : 'The list is empty, so new_node.next is None');
+  r.v['self.head'] = id;
+  r.push(4, 'self.head points at the new node');
+  return r.finish('The method returns and the new node is first in the list');
+},
+prependBad(s0, x){
+  const r = new Rec(s0);
+  r.push(1, `Calling prepend(${x})`);
+  const id = r.node(x, -1, 1); r.v.new_node = id;
+  r.push(2, 'Create the new node. It is not part of the list yet.');
+  const had = r.v['self.head'] != null;
+  r.v['self.head'] = id;
+  r.push(3, had ? 'self.head points at the new node. Nothing points at the old first node anymore.' : 'self.head points at the new node');
+  r.n(id).next = r.v['self.head'];
+  r.push(4, 'self.head is the new node, so the new node now points at itself');
+  return r.finish((had ? 'The old nodes are lost, and the list' : 'The list') + ' is one node that points at itself. A loop over it would never end.', {layout:false});
+},
+append(s0, x){
+  const r = new Rec(s0);
+  r.push(1, `Calling append(${x})`);
+  const id = r.node(x, lenOf(r.s), 1); r.v.new_node = id;
+  r.push(2, 'Create the new node');
+  if (r.v['self.head'] == null) {
+    r.push(3, 'The list is empty');
+    r.v['self.head'] = id; r.push(4, 'The new node becomes the head');
+    r.push(5, 'Return. There is no last node to attach to.');
+    return r.finish('The list now has one node');
+  }
+  r.push(3, 'The list is not empty, so skip the if');
+  r.v.current = r.v['self.head']; r.push(6, 'current starts at the first node');
+  for (;;) {
+    const nx = r.n(r.v.current).next;
+    if (nx == null) { r.push(7, 'current.next is None, so current is the last node'); break; }
+    r.push(7, 'current.next is a node, so keep walking');
+    r.v.current = nx; r.push(8, 'current moves forward');
+  }
+  r.n(r.v.current).next = id;
+  r.push(9, 'The last node now points at the new node');
+  return r.finish('The new node is at the end of the list');
+},
+contains(s0, t){
+  const r = new Rec(s0);
+  r.push(1, `Calling contains(${t})`);
+  r.v.current = r.v['self.head'];
+  r.push(2, r.v.current ? 'current starts at the first node' : 'The list is empty, so current is None');
+  for (;;) {
+    const c = r.v.current;
+    if (c == null) {
+      r.push(3, 'current is None, so the loop stops');
+      r.out.push(`contains(${t}) returned False`); r.push(7, `${t} is not in the list. Return False.`);
+      return r.finish('contains returned False');
+    }
+    r.push(3, 'current is a node');
+    if (r.n(c).data === t) {
+      r.s.hl[c] = 1; r.push(4, `${r.n(c).data} == ${t}, found it`);
+      r.out.push(`contains(${t}) returned True`); r.push(5, 'Return True right away');
+      return r.finish('contains returned True', {before: s => { s.hl = {}; }});
+    }
+    r.push(4, `${r.n(c).data} is not ${t}`);
+    r.v.current = r.n(c).next; r.push(6, r.v.current ? 'current moves forward' : 'current moves to None');
+  }
+},
+insert(s0, idx, x){
+  const r = new Rec(s0);
+  r.push(1, `Calling insert(${idx}, ${x})`);
+  if (idx === 0) {
+    r.push(2, 'index is 0, so use prepend');
+    const id = r.node(x, -1, 1); r.v.new_node = id; r.push(3, 'Inside prepend, create the new node');
+    r.n(id).next = r.v['self.head']; r.push(3, 'Inside prepend, the new node points at the first node');
+    r.v['self.head'] = id; r.push(3, 'Inside prepend, self.head points at the new node');
+    r.push(4, 'Return');
+    return r.finish('The new node is at index 0');
+  }
+  r.push(2, 'index is not 0');
+  r.v.current = r.v['self.head']; r.push(5, r.v.current ? 'current starts at the first node' : 'The list is empty, so current is None');
+  r.watch.position = 0; r.push(6, 'position tracks which index current is at');
+  for (;;) {
+    const c = r.v.current;
+    if (c == null) { r.push(7, 'current is None, so the loop stops'); break; }
+    if (!(r.watch.position < idx - 1)) { r.push(7, `position is ${r.watch.position}, the node right before index ${idx}, so stop`); break; }
+    r.push(7, `position ${r.watch.position} is less than ${idx - 1}, keep walking`);
+    r.v.current = r.n(c).next; r.push(8, r.v.current ? 'current moves forward' : 'current moves to None');
+    r.watch.position++; r.push(9, 'position is now '+r.watch.position);
+  }
+  if (r.v.current == null) {
+    r.push(10, 'current is None, so the index is past the end');
+    r.out.push('Index out of range');
+    r.push(11, 'Print a message');
+    r.push(12, 'Return without changing the list');
+    return r.finish('The list did not change');
+  }
+  r.push(10, 'current is the node before the position');
+  const id = r.node(x, idx, 1); r.v.new_node = id; r.push(13, 'Create the new node');
+  const after = r.n(r.v.current).next;
+  r.n(id).next = after;
+  r.push(14, after ? 'The new node points at the node that comes after current' : 'current is the last node, so new_node.next is None');
+  r.n(r.v.current).next = id;
+  r.push(15, 'current now points at the new node');
+  return r.finish('The new node is at index '+idx);
+},
+removeFirst(s0){
+  const r = new Rec(s0);
+  r.push(1, 'Calling remove_first()');
+  const h = r.v['self.head'];
+  if (h == null) {
+    r.push(2, 'The list is empty');
+    r.out.push('The list is empty');
+    r.push(3, 'Print a message');
+    r.push(4, 'Return. There is nothing to remove.');
+    return r.finish('The list is still empty');
+  }
+  r.push(2, 'The list is not empty');
+  r.v.removed = h; r.push(5, 'removed keeps a reference to the first node');
+  r.v['self.head'] = r.n(h).next;
+  r.push(6, r.v['self.head'] ? 'self.head moves to the second node' : 'self.head moves to None. The list is now empty.');
+  r.out.push('remove_first() returned '+r.n(h).data);
+  r.push(7, 'Return '+r.n(h).data);
+  return r.finish('Nothing points at the old first node now, so Python frees it', {before: s => { s.nodes[h].row = 1; }});
+},
+remove(s0, t){
+  const r = new Rec(s0);
+  r.push(1, `Calling remove(${t})`);
+  r.v.prev = null; r.push(2, 'prev starts as None. There is no node before the first one.');
+  r.v.current = r.v['self.head'];
+  r.push(3, r.v.current ? 'current starts at the first node' : 'The list is empty, so current is None');
+  for (;;) {
+    const c = r.v.current;
+    if (c == null) {
+      r.push(4, 'current is None, so the loop stops');
+      r.out.push('Value not in list');
+      r.push(13, `${t} was not found, so print a message`);
+      return r.finish('The list did not change');
+    }
+    r.push(4, 'current is a node');
+    if (r.n(c).data === t) {
+      r.s.hl[c] = 1; r.push(5, `Found ${t}`);
+      if (r.v.prev == null) {
+        r.push(6, 'prev is None, so the target is the first node');
+        r.v['self.head'] = r.n(c).next; r.n(c).row = 1;
+        r.push(7, 'self.head skips over the target');
+      } else {
+        r.push(6, 'prev is a node');
+        r.n(r.v.prev).next = r.n(c).next; r.n(c).row = 1;
+        r.push(9, 'prev now skips over the target');
+      }
+      r.push(10, 'Return');
+      return r.finish('Nothing points at the removed node now, so Python frees it', {before: s => { s.hl = {}; }});
+    }
+    r.push(5, `${r.n(c).data} is not ${t}`);
+    r.v.prev = c; r.push(11, 'prev moves up to current');
+    r.v.current = r.n(c).next; r.push(12, r.v.current ? 'current moves forward' : 'current moves to None');
+  }
+},
+appendTail(s0, x){
+  const r = new Rec(s0);
+  r.push(1, `Calling append(${x})`);
+  const id = r.node(x, lenOf(r.s), 1); r.v.new_node = id;
+  r.push(2, 'Create the new node');
+  if (r.v['self.head'] == null) {
+    r.push(3, 'The list is empty');
+    r.v['self.head'] = id; r.push(4, 'The new node becomes the head');
+    r.v['self.tail'] = id; r.push(5, 'It is also the tail');
+    r.push(6, 'Return');
+    return r.finish('The list now has one node');
+  }
+  r.push(3, 'The list is not empty');
+  r.n(r.v['self.tail']).next = id; r.push(7, 'The last node points at the new node. No walking needed.');
+  r.v['self.tail'] = id; r.push(8, 'self.tail moves to the new node');
+  return r.finish('The new node is at the end of the list');
+}
+};
+const linesRun = (steps, upto) => steps.slice(0, upto == null ? steps.length : upto + 1).filter(s => s.line && s.line > 1).length;
+
+/* ---------- player ---------- */
+const PLAYERS = [];
+class Player {
+  constructor(root, o={}){
+    this.o = o; this.steps = []; this.i = 0; this.timer = 0;
+    root.classList.add('pl'); if (o.stack) root.classList.add('stack');
+    root.innerHTML = `<pre class="code"></pre>
+      <div class="pl-side">
+        <div class="pl-ctl"${o.noCtl ? ' hidden' : ''}><button data-a="back">Back</button><button data-a="step" class="pri">Step</button><button data-a="play">Play</button><span class="pl-count"></span></div>
+        <p class="pl-note"></p>
+        <div class="pl-watch"></div>
+        <div class="pl-dia"><svg class="dia"></svg></div>
+        <div class="pl-out" hidden><div class="lbl">Output</div><pre></pre></div>
+      </div>`;
+    this.pre = root.querySelector('pre.code');
+    this.note = root.querySelector('.pl-note');
+    this.watch = root.querySelector('.pl-watch');
+    this.outBox = root.querySelector('.pl-out');
+    this.outPre = this.outBox.querySelector('pre');
+    this.count = root.querySelector('.pl-count');
+    this.btn = {}; root.querySelectorAll('[data-a]').forEach(b => { this.btn[b.dataset.a] = b; });
+    this.btn.back.onclick = () => { this.pause(); this.go(this.i - 1); };
+    this.btn.step.onclick = () => { this.pause(); this.i >= this.steps.length - 1 ? this.go(0, false) : this.go(this.i + 1); };
+    this.btn.play.onclick = () => this.timer ? this.pause() : this.play();
+    this.dia = new Diagram(root.querySelector('svg'), {rows:o.rows, span:o.span});
+    if (o.code) this.setCode(o.code);
+    PLAYERS.push(this);
+  }
+  setCode(code){ this.code = code; this.lines = code.split('\n').length; renderCode(this.pre, code); this.lineEls = this.pre.querySelectorAll('.ln'); }
+  load(steps){
+    this.pause();
+    this.steps = steps;
+    const changed = this.dia.setBounds(boundsOf(steps.map(s => s.state), {rows:this.o.rows, span:this.o.span}));
+    this.go(0, !changed);
+  }
+  go(i, anim=true){
+    i = Math.max(0, Math.min(this.steps.length - 1, i));
+    this.i = i;
+    const st = this.steps[i];
+    this.lineEls.forEach((el, k) => el.classList.toggle('on', k + 1 === st.line));
+    this.note.textContent = st.note || '';
+    const w = Object.entries(st.watch || {}).map(([k,v]) => `<span>${esc(k)} = <b>${esc(v)}</b></span>`);
+    if (this.o.countLines) w.push(`<span>lines run = <b>${linesRun(this.steps, i)}</b></span>`);
+    this.watch.innerHTML = w.join('');
+    const anyOut = this.steps.some(s => s.out && s.out.length);
+    this.outBox.hidden = !anyOut;
+    this.outPre.innerHTML = (st.out || []).map(l => /Error/.test(l) ? `<span class="err">${esc(l)}</span>` : esc(l)).join('\n') || ' ';
+    this.count.textContent = this.steps.length > 1 ? `Step ${i+1} of ${this.steps.length}` : '';
+    const end = i >= this.steps.length - 1;
+    this.btn.back.disabled = i === 0;
+    this.btn.step.textContent = end && this.steps.length > 1 ? 'Start over' : 'Step';
+    this.btn.step.disabled = this.steps.length < 2;
+    this.btn.play.disabled = this.steps.length < 2;
+    this.dia.show(st.state, anim);
+    if (this.o.onStep) this.o.onStep(i, this);
+  }
+  play(){
+    if (this.i >= this.steps.length - 1) this.go(0, false);
+    this.btn.play.textContent = 'Pause';
+    this.timer = setInterval(() => { this.go(this.i + 1); if (this.i >= this.steps.length - 1) this.pause(); }, 1200);
+  }
+  pause(){ clearInterval(this.timer); this.timer = 0; if (this.btn) this.btn.play.textContent = 'Play'; }
+}
+function idle(s, note){ return [{state:s, line:null, note, out:[], watch:{}}]; }
+
+/* ---------- title slide ---------- */
+new Diagram($('s0dia'), {span:3}).show(mk([10,20,30,40]), false);
+
+/* ---------- slide 1 ---------- */
+(() => {
+  const dia = new Diagram($('s1dia'), {span:6});
+  let k = 3;
+  function state(){
+    const s = mk(Array.from({length:k}, (_,i) => (i+1)*10), {noHead:true});
+    Object.keys(s.nodes).forEach((id,i) => { s.vars['n'+(i+1)] = id; });
+    return s;
+  }
+  let s = state();
+  function render(anim){
+    const lines = [];
+    for (let i = 1; i <= k; i++) lines.push(`n${i} = Node(${i*10})`);
+    for (let i = 1; i < k; i++) lines.push(`n${i}.next = n${i+1}`);
+    renderCode($('s1code'), lines.join('\n'));
+    $('s1count').textContent = `${k} nodes, ${k} variables`;
+    $('s1add').textContent = k >= 7 ? 'Start over' : 'Add a node';
+    dia.show(s, anim);
+  }
+  $('s1add').onclick = () => {
+    if (k >= 7) { k = 3; s = state(); return render(false); }
+    k++;
+    const id = 'n'+(++UID);
+    const last = s.vars['n'+(k-1)];
+    s = clone(s);
+    s.nodes[id] = {data:k*10, next:null, col:k-1, row:0};
+    s.nodes[last].next = id;
+    s.vars['n'+k] = id;
+    render(true);
+  };
+  render(false);
+})();
+
+/* ---------- slide 2 ---------- */
+(() => {
+  renderCode($('s2code'),
+`class Node:
+    def __init__(self, data):
+        self.data = data
+        self.next = None
+
+class LinkedList:
+    def __init__(self):
+        self.head = None`);
+  const base = mk([10,20,30,40], {obj:'my_list'});
+  const ids = chainIds(base);
+  const dia = new Diagram($('s2dia'), {onClick: id => {
+    const i = ids.indexOf(id); if (i < 0) return;
+    const s = clone(base); s.hl[id] = 1; dia.show(s, false);
+    $('s2out').textContent = 'my_list.head' + '.next'.repeat(i) + '.data   is   ' + base.nodes[id].data;
+  }});
+  dia.show(base, false);
+})();
+
+/* ---------- slide 3 ---------- */
+(() => {
+  renderCode($('s3code'), `my_list = LinkedList()\nprint(my_list.head)`);
+  const dia = new Diagram($('s3dia'), {span:2});
+  dia.show(mk([], {obj:'my_list'}), false);
+})();
+
+/* ---------- slide 4, 5, 6 ---------- */
+(() => {
+  const p4 = new Player($('s4pl'), {code:CODE.traverse});
+  p4.load(GEN.traverse(mk([10,20,30,40])));
+  const p5 = new Player($('s5pl'), {code:CODE.badTraverse});
+  p5.load(GEN.badTraverse(mk([10,20,30,40])));
+  scenarios('s6sc', new Player($('s6pl'), {code:CODE.length, span:3}), [
+    ['3 nodes', () => GEN.length(mk([10,20,30]))],
+    ['Empty list', () => GEN.length(mk([]))]
+  ]);
+})();
+
+/* ---------- slides 7 to 13: preset scenarios ---------- */
+function scenarios(rowId, player, list){
+  const row = $(rowId);
+  const pick = i => {
+    [...row.children].forEach((b, k) => b.classList.toggle('sel', k === i));
+    player.load(list[i][1]());
+  };
+  list.forEach(([label], i) => { const b = document.createElement('button'); b.textContent = label; b.onclick = () => pick(i); row.appendChild(b); });
+  if (list.length < 2) row.hidden = true;
+  pick(0);
+  return player;
+}
+const opP = (id, code, span) => new Player($(id), {code, rows:2, span:span ?? 4});
+
+scenarios('s7sc', opP('s7pl', CODE.prepend), [
+  ['List of 3', () => GEN.prepend(mk([10,20,30]), 5)],
+  ['Empty list', () => GEN.prepend(mk([]), 5)]
+]);
+
+(() => {
+  const p = new Player($('s8pl'), {code:CODE.prepend, rows:2});
+  const set = bad => {
+    $('s8ok').classList.toggle('sel', !bad); $('s8bad').classList.toggle('sel', bad);
+    p.setCode(bad ? CODE.prependBad : CODE.prepend);
+    p.load(bad ? GEN.prependBad(mk([10,20,30]), 5) : GEN.prepend(mk([10,20,30]), 5));
+  };
+  $('s8ok').onclick = () => set(false);
+  $('s8bad').onclick = () => set(true);
+  set(false);
+})();
+
+scenarios('s9sc', opP('s9pl', CODE.append), [
+  ['List of 3', () => GEN.append(mk([10,20,30]), 40)],
+  ['Empty list', () => GEN.append(mk([]), 40)]
+]);
+
+scenarios('s10sc', opP('s10pl', CODE.contains), [
+  ['contains(30)', () => GEN.contains(mk([10,20,30,40]), 30)],
+  ['contains(50)', () => GEN.contains(mk([10,20,30,40]), 50)]
+]);
+
+scenarios('s11sc', opP('s11pl', CODE.insert), [
+  ['insert(2, 25)', () => GEN.insert(mk([10,20,30]), 2, 25)],
+  ['insert(0, 5)', () => GEN.insert(mk([10,20,30]), 0, 5)],
+  ['insert(5, 25)', () => GEN.insert(mk([10,20,30]), 5, 25)]
+]);
+
+scenarios('s12sc', opP('s12pl', CODE.removeFirst), [
+  ['List of 3', () => GEN.removeFirst(mk([10,20,30]))],
+  ['Empty list', () => GEN.removeFirst(mk([]))]
+]);
+
+scenarios('s13sc', opP('s13pl', CODE.remove, 5), [
+  ['remove(30)', () => GEN.remove(mk([10,20,30,40]), 30)],
+  ['remove(10)', () => GEN.remove(mk([10,20,30,40]), 10)],
+  ['remove(50)', () => GEN.remove(mk([10,20,30,40]), 50)]
+]);
+
+/* ---------- slide 14: edge case grid ---------- */
+(() => {
+  const CRASH = "AttributeError: 'NoneType' object has no attribute 'next'";
+  const M = {
+    append: {
+      care:{code:CODE.append, edge:[3,4,5]},
+      naive:{code:
+`def append(self, data):
+    new_node = Node(data)
+    current = self.head
+    while current.next is not None:
+        current = current.next
+    current.next = new_node`, crashLine:4}},
+    insert: {
+      care:{code:CODE.insert, edge:[2,3,4,10,11,12]},
+      naive:{code:
+`def insert(self, index, data):
+    current = self.head
+    position = 0
+    while current is not None and position < index - 1:
+        current = current.next
+        position += 1
+    new_node = Node(data)
+    new_node.next = current.next
+    current.next = new_node`, crashLine:8}},
+    remove: {
+      care:{code:CODE.remove, edge:[6,7,8]},
+      naive:{code:
+`def remove(self, target):
+    prev = None
+    current = self.head
+    while current is not None:
+        if current.data == target:
+            prev.next = current.next
+            return
+        prev = current
+        current = current.next
+    print("Value not in list")`, crashLine:6}},
+    remove_first: {
+      care:{code:CODE.removeFirst, edge:[2,3,4]},
+      naive:{code:
+`def remove_first(self):
+    removed = self.head
+    self.head = self.head.next
+    return removed.data`, crashLine:3}}
+  };
+  function run(ver, m, L, a){
+    L = L.slice();
+    const naive = ver === 'naive';
+    if (m === 'append') { if (naive && !L.length) return {error:CRASH, crash:true}; L.push(a[0]); return {list:L}; }
+    if (m === 'insert') {
+      const [i, x] = a;
+      if (!naive) { if (i === 0) return {list:[x, ...L]}; if (i > L.length) return {list:L, printed:'Index out of range'}; L.splice(i, 0, x); return {list:L}; }
+      if (!L.length) return {error:CRASH, crash:true};
+      let c = 0, pos = 0;
+      while (c < L.length && pos < i - 1) { c++; pos++; }
+      if (c >= L.length) return {error:CRASH, crash:true};
+      L.splice(c + 1, 0, x); return {list:L};
+    }
+    if (m === 'remove') {
+      const k = L.indexOf(a[0]);
+      if (k < 0) return {list:L, printed:'Value not in list'};
+      if (naive && k === 0) return {error:CRASH, crash:true};
+      L.splice(k, 1); return {list:L};
+    }
+    if (m === 'remove_first') {
+      if (!L.length) return naive ? {error:CRASH, crash:true} : {list:L, printed:'The list is empty'};
+      L.shift(); return {list:L};
+    }
+  }
+  const CASES = [
+    {name:'Empty list', list:[], calls:{append:[5], insert:[0,5], remove:[10], remove_first:[]}},
+    {name:'One node', list:[10], calls:{append:[5], insert:[1,5], remove:[10], remove_first:[]}},
+    {name:'First node', list:[10,20,30], calls:{append:null, insert:[0,5], remove:[10], remove_first:[]}},
+    {name:'Last node', list:[10,20,30], calls:{append:[5], insert:[3,5], remove:[30], remove_first:null}}
+  ];
+  const METHODS = ['append','insert','remove','remove_first'];
+  let ver = 'naive', sel = [0, 'append'];
+  const fmt = L => L.length ? L.join(' → ') : 'empty';
+  const callText = (m, a) => `${m}(${a.join(', ')})`;
+  function status(c, m){
+    const a = CASES[c].calls[m];
+    const res = run(ver, m, CASES[c].list, a), good = run('care', m, CASES[c].list, a);
+    if (res.crash) return {res, txt:'Crashes', cls:'crash'};
+    if (res.list && good.list && res.list.join() !== good.list.join()) return {res, txt:'Wrong result', cls:'crash'};
+    if (res.printed) return {res, txt:'Prints a message', cls:''};
+    return {res, txt:'Works', cls:''};
+  }
+  function render(){
+    $('s14naive').classList.toggle('sel', ver === 'naive');
+    $('s14care').classList.toggle('sel', ver === 'care');
+    const g = $('s14grid');
+    let h = '<div></div>' + METHODS.map(m => `<div class="h">${m}</div>`).join('');
+    CASES.forEach((cs, c) => {
+      h += `<div class="rh">${cs.name}<div class="mut small" style="font-weight:400">${fmt(cs.list)}</div></div>`;
+      METHODS.forEach(m => {
+        const a = cs.calls[m];
+        if (!a) { h += '<div class="cell na">n/a</div>'; return; }
+        const st = status(c, m);
+        const on = sel[0] === c && sel[1] === m;
+        h += `<button class="cell ${st.cls}${on?' on':''}" data-c="${c}" data-m="${m}"><code>${callText(m,a)}</code><span class="stt">${st.txt}</span></button>`;
+      });
+    });
+    g.innerHTML = h;
+    g.querySelectorAll('button.cell').forEach(b => b.onclick = () => { sel = [+b.dataset.c, b.dataset.m]; render(); });
+    const [c, m] = sel, a = CASES[c].calls[m], info = M[m][ver], st = status(c, m);
+    const marks = {};
+    if (ver === 'care') info.edge.forEach(l => marks[l] = 'edge');
+    else if (st.res.crash) marks[info.crashLine] = 'bad';
+    renderCode($('s14code'), info.code, marks);
+    const res = st.res.error ? `<span class="err">${esc(st.res.error)}</span>` : (st.res.printed ? 'prints: ' + esc(st.res.printed) + '\n' : '') + esc(fmt(st.res.list));
+    $('s14detail').innerHTML =
+      `<div><div class="lbl">Before</div><pre class="out">${esc(fmt(CASES[c].list))}</pre></div>`
+      + `<div><div class="lbl">Call</div><pre class="out">my_list.${esc(callText(m,a))}</pre></div>`
+      + `<div><div class="lbl">Result</div><pre class="out">${res}</pre></div>`
+      + `<p class="small">${ver === 'care' ? 'The shaded lines are the edge checks' : st.res.crash ? 'It crashes on the shaded line' : st.txt === 'Wrong result' ? 'No error, but the list is wrong. That makes this bug harder to notice.' : 'This case happens to work without the edge checks'}</p>`;
+  }
+  $('s14naive').onclick = () => { ver = 'naive'; render(); };
+  $('s14care').onclick = () => { ver = 'care'; render(); };
+  render();
+})();
+
+/* ---------- Python runner (Skulpt, loaded on first use) ---------- */
+const SK = ['https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js', 'https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt-stdlib.js'];
+let skP = null;
+function loadScript(src){ return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('Could not load '+src)); document.head.appendChild(s); }); }
+function loadSk(){ if (!skP) skP = loadScript(SK[0]).then(() => loadScript(SK[1])).then(() => window.Sk).catch(e => { skP = null; throw e; }); return skP; }
+async function runPy(code, offset=0){
+  const Sk = await loadSk();
+  let out = '';
+  Sk.configure({
+    output: t => { out += t; },
+    read: f => { if (Sk.builtinFiles === undefined || Sk.builtinFiles.files[f] === undefined) throw "File not found: '" + f + "'"; return Sk.builtinFiles.files[f]; },
+    __future__: Sk.python3,
+    execLimit: 2000
+  });
+  try {
+    await Sk.misceval.asyncToPromise(() => Sk.importMainWithBody('<stdin>', false, code, true));
+    return {out};
+  } catch (e) {
+    let msg = e.toString();
+    if (/TimeLimitError/.test(msg)) msg = 'Stopped after 2 seconds without finishing. A loop is probably never ending.';
+    msg = msg.replace(/on line (\d+)/, (m, n) => 'on line ' + Math.max(1, n - offset));
+    return {out, err:msg};
+  }
+}
+function editorKeys(ta){
+  ta.addEventListener('keydown', e => {
+    if (e.key === 'Tab' && !e.shiftKey) {
+      e.preventDefault();
+      const s = ta.selectionStart;
+      ta.setRangeText('    ', s, ta.selectionEnd, 'end');
+    } else if (e.key === 'Enter') {
+      const s = ta.selectionStart, before = ta.value.slice(0, s);
+      const line = before.slice(before.lastIndexOf('\n') + 1);
+      let ind = (line.match(/^ */) || [''])[0];
+      if (/:\s*$/.test(line)) ind += '    ';
+      e.preventDefault();
+      ta.setRangeText('\n' + ind, s, ta.selectionEnd, 'end');
+    }
+  });
+}
+
+/* ---------- slide 15: errors ---------- */
+(() => {
+  const PRE = `class Node:\n    def __init__(self, data):\n        self.data = data\n        self.next = None\n\n`;
+  const PRE_LINES = 5;
+  const T = [
+    {tab:"AttributeError on None", desc:"You walked past the last node, then asked None for .next",
+     code:
+`class LinkedList:
+    def __init__(self):
+        self.head = None
+
+    def append(self, data):
+        new_node = Node(data)
+        if self.head is None:
+            self.head = new_node
+            return
+        current = self.head
+        while current is not None:
+            current = current.next
+        current.next = new_node
+
+my_list = LinkedList()
+my_list.append(10)
+my_list.append(20)
+print("done")`,
+     fix:
+`class LinkedList:
+    def __init__(self):
+        self.head = None
+
+    def append(self, data):
+        new_node = Node(data)
+        if self.head is None:
+            self.head = new_node
+            return
+        current = self.head
+        while current.next is not None:
+            current = current.next
+        current.next = new_node
+
+my_list = LinkedList()
+my_list.append(10)
+my_list.append(20)
+print("done")`,
+     hint:"The loop ran until current was None, and None has no next. Checking current.next stops one node earlier, on the last node."},
+    {tab:"A loop that never ends", desc:"The loop never moves current forward, so the condition never changes",
+     code:
+`class LinkedList:
+    def __init__(self):
+        self.head = None
+
+    def length(self):
+        count = 0
+        current = self.head
+        while current is not None:
+            count += 1
+        return count
+
+my_list = LinkedList()
+my_list.head = Node(10)
+my_list.head.next = Node(20)
+print(my_list.length())`,
+     fix:
+`class LinkedList:
+    def __init__(self):
+        self.head = None
+
+    def length(self):
+        count = 0
+        current = self.head
+        while current is not None:
+            count += 1
+            current = current.next
+        return count
+
+my_list = LinkedList()
+my_list.head = Node(10)
+my_list.head.next = Node(20)
+print(my_list.length())`,
+     hint:"Every traversal loop needs current = current.next, or current stays on the same node forever."},
+    {tab:"The list suddenly looks empty", desc:"A method moved self.head instead of using current",
+     code:
+`class LinkedList:
+    def __init__(self):
+        self.head = None
+
+    def print_all(self):
+        while self.head is not None:
+            print(self.head.data)
+            self.head = self.head.next
+
+my_list = LinkedList()
+my_list.head = Node(10)
+my_list.head.next = Node(20)
+my_list.print_all()
+print("again:")
+my_list.print_all()`,
+     fix:
+`class LinkedList:
+    def __init__(self):
+        self.head = None
+
+    def print_all(self):
+        current = self.head
+        while current is not None:
+            print(current.data)
+            current = current.next
+
+my_list = LinkedList()
+my_list.head = Node(10)
+my_list.head.next = Node(20)
+my_list.print_all()
+print("again:")
+my_list.print_all()`,
+     hint:"No error appears, which makes this one easy to miss. The first call printed everything and left self.head at None."}
+  ];
+  let cur = 0, fixed = false;
+  const ed = $('s15ed'); editorKeys(ed);
+  const tabs = $('s15tabs');
+  T.forEach((t, i) => { const b = document.createElement('button'); b.textContent = t.tab; b.onclick = () => pick(i); tabs.appendChild(b); });
+  function pick(i){
+    cur = i;
+    [...tabs.children].forEach((b, k) => b.classList.toggle('sel', k === i));
+    $('s15desc').textContent = T[i].desc;
+    ed.value = T[i].code;
+    $('s15out').textContent = 'Press Run';
+    $('s15hint').hidden = true;
+    fixed = false; $('s15fix').textContent = 'Show a fix';
+  }
+  $('s15run').onclick = async () => {
+    const o = $('s15out');
+    o.textContent = window.Sk ? 'Running...' : 'Loading Python, this takes a moment the first time...';
+    try {
+      const r = await runPy(PRE + ed.value, PRE_LINES);
+      o.innerHTML = esc(r.out) + (r.err ? `<span class="err">${esc(r.err)}</span>` : (r.out ? '' : '(no output)'));
+    } catch (e) { o.innerHTML = `<span class="err">${esc(e.message)}. Check your internet connection.</span>`; }
+  };
+  $('s15fix').onclick = () => {
+    if (fixed) return pick(cur);
+    ed.value = T[cur].fix; fixed = true; $('s15fix').textContent = 'Show the bug';
+    $('s15hint').textContent = T[cur].hint; $('s15hint').hidden = false; $('s15out').textContent = 'Press Run';
+  };
+  pick(0);
+})();
+
+/* ---------- slide 16: counting steps ---------- */
+(() => {
+  const L = n => mk(Array.from({length:n}, (_,i) => (i+1)*10));
+  const p = new Player($('s16pl'), {code:CODE.append, rows:2, span:4, countLines:true});
+  scenarios('s16sc', p, [
+    ['append on 3 nodes', () => { p.setCode(CODE.append); return GEN.append(L(3), 40); }],
+    ['prepend on 3 nodes', () => { p.setCode(CODE.prepend); return GEN.prepend(L(3), 5); }]
+  ]);
+  $('s16tab').querySelector('tbody').innerHTML = [1,2,5,10,100].map(n =>
+    `<tr><td class="num">${n}</td><td class="num">${linesRun(GEN.prepend(L(n), 5))}</td><td class="num">${linesRun(GEN.append(L(n), 5))}</td></tr>`).join('');
+})();
+
+/* ---------- slide 17: table ---------- */
+$('s17t').querySelector('tbody').innerHTML = [
+  ['prepend', 'O(1)', 'Only touches head'],
+  ['remove_first', 'O(1)', 'Only touches head'],
+  ['append', 'O(n)', 'Walks to the end'],
+  ['length', 'O(n)', 'Visits every node'],
+  ['contains', 'O(n)', 'May visit every node'],
+  ['insert', 'O(n)', 'Walks to the position'],
+  ['remove', 'O(n)', 'Walks to find the value']
+].map(r => `<tr><td><code>${r[0]}</code></td><td><b>${r[1]}</b></td><td>${r[2]}</td></tr>`).join('');
+
+/* ---------- slide 18: space ---------- */
+(() => {
+  const dia = new Diagram($('s18dia'));
+  dia.setBounds(boundsOf([mk([])], {span:7}));
+  let n = 3, s = mk([10,20,30]);
+  const render = anim => {
+    dia.show(s, anim);
+    $('s18add').textContent = n >= 8 ? 'Start over' : 'Add a node';
+    $('s18stat').innerHTML = `<span>Nodes</span><b>${n}</b><span>Data values</span><b>${n}</b><span>next references</span><b>${n}</b><span>self.head</span><b>1</b><span>Total references</span><b>${n} + 1 = ${n+1}</b>`;
+  };
+  $('s18add').onclick = () => {
+    if (n >= 8) { n = 1; s = mk([10]); return render(false); }
+    const ids = chainIds(s); s = clone(s);
+    const id = 'n'+(++UID); s.nodes[id] = {data:(n+1)*10, next:null, col:n, row:0};
+    s.nodes[ids[ids.length-1]].next = id; n++;
+    render(true);
+  };
+  render(false);
+})();
+
+/* ---------- slide 19: tail ---------- */
+(() => {
+  const a = new Player($('s19a'), {code:CODE.append, rows:2, span:5, countLines:true, stack:true, noCtl:true});
+  const b = new Player($('s19b'), {code:CODE.appendTail, rows:2, span:5, countLines:true, stack:true, noCtl:true});
+  let A = clean(mk([10,20,30])), B = clean(mk([10,20,30], {tail:true})), x = 40, i = 0, sa, sb;
+  const load = () => { sa = GEN.append(A, x); sb = GEN.appendTail(B, x); a.load(sa); b.load(sb); i = 0; show(); };
+  const total = () => Math.max(sa.length, sb.length);
+  const show = () => {
+    a.go(Math.min(i, sa.length - 1)); b.go(Math.min(i, sb.length - 1));
+    const end = i >= total() - 1;
+    $('s19back').disabled = i === 0;
+    $('s19step').textContent = !end ? 'Step' : lenOf(sa[sa.length-1].state) >= 6 ? 'Start over' : `Append ${x + 10}`;
+    $('s19count').textContent = `Step ${i+1} of ${total()}`;
+  };
+  let timer = 0;
+  const stop = () => { clearInterval(timer); timer = 0; $('s19play').textContent = 'Play'; };
+  PLAYERS.push({pause: stop});
+  $('s19play').onclick = () => {
+    if (timer) return stop();
+    if (i >= total() - 1) $('s19step').onclick();
+    $('s19play').textContent = 'Pause';
+    timer = setInterval(() => { i++; show(); if (i >= total() - 1) stop(); }, 1200);
+  };
+  $('s19back').onclick = () => { stop(); i = Math.max(0, i - 1); show(); };
+  $('s19step').onclick = () => {
+    stop();
+    if (i < total() - 1) { i++; return show(); }
+    A = clean(sa[sa.length-1].state); B = clean(sb[sb.length-1].state);
+    if (lenOf(A) >= 6) { A = clean(mk([10,20,30])); B = clean(mk([10,20,30], {tail:true})); x = 40; }
+    else x += 10;
+    load();
+  };
+  load();
+})();
+
+/* ---------- slide 20: playground ---------- */
+(() => {
+  const START =
+`class Node:
+    def __init__(self, data):
+        self.data = data
+        self.next = None
+
+
+class LinkedList:
+    def __init__(self):
+        self.head = None
+
+    def prepend(self, data):
+        new_node = Node(data)
+        new_node.next = self.head
+        self.head = new_node
+
+    def append(self, data):
+        new_node = Node(data)
+        if self.head is None:
+            self.head = new_node
+            return
+        current = self.head
+        while current.next is not None:
+            current = current.next
+        current.next = new_node
+
+    def remove_first(self):
+        if self.head is None:
+            print("The list is empty")
+            return
+        removed = self.head
+        self.head = self.head.next
+        return removed.data
+
+    def remove(self, target):
+        prev = None
+        current = self.head
+        while current is not None:
+            if current.data == target:
+                if prev is None:
+                    self.head = current.next
+                else:
+                    prev.next = current.next
+                return
+            prev = current
+            current = current.next
+        print("Value not in list")
+
+
+`;
+  const ed = $('pgEd'); ed.value = START; editorKeys(ed);
+  const dia = new Diagram($('pgDia'), {span:4});
+  let ids = [], vals = [10,20,30];
+  function stateFrom(newVals){
+    // keep node identity where values line up, so nodes slide instead of popping
+    const n = vals.length, m = newVals.length;
+    const dp = Array.from({length:n+1}, () => new Array(m+1).fill(0));
+    for (let i = n-1; i >= 0; i--) for (let j = m-1; j >= 0; j--)
+      dp[i][j] = vals[i] === newVals[j] ? dp[i+1][j+1] + 1 : Math.max(dp[i+1][j], dp[i][j+1]);
+    const nid = new Array(m).fill(null);
+    let i = 0, j = 0;
+    while (i < n && j < m) { if (vals[i] === newVals[j]) { nid[j] = ids[i]; i++; j++; } else if (dp[i+1][j] >= dp[i][j+1]) i++; else j++; }
+    const s = {nodes:{}, vars:{'self.head':null}, hl:{}};
+    nid.forEach((id, k) => { if (!id) nid[k] = 'n'+(++UID); });
+    nid.forEach((id, k) => { s.nodes[id] = {data:newVals[k], next:nid[k+1] || null, col:k, row:0}; });
+    s.vars['self.head'] = nid[0] || null;
+    ids = nid; vals = newVals.slice();
+    return s;
+  }
+  function render(newVals, anim){
+    const s = stateFrom(newVals);
+    dia.setBounds(boundsOf([s], {span:Math.max(4, newVals.length)}));
+    dia.show(s, anim);
+  }
+  render(vals, false);
+  const out = $('pgOut');
+  const log = (html) => { out.innerHTML += (out.innerHTML ? '\n' : '') + html; out.scrollTop = out.scrollHeight; };
+  const pyVal = v => typeof v === 'number' ? String(v) : JSON.stringify(String(v));
+  async function call(expr, label){
+    const harness = `
+_ll = LinkedList()
+_last = None
+for _v in [${vals.map(pyVal).join(', ')}]:
+    _n = Node(_v)
+    if _last is None:
+        _ll.head = _n
+    else:
+        _last.next = _n
+    _last = _n
+_result = _ll.${expr}
+_vals = []
+_c = _ll.head
+while _c is not None and len(_vals) <= 30:
+    _vals.append(_c.data)
+    _c = _c.next
+print("@@STATE", _vals, len(_vals) > 30)
+print("@@RESULT", repr(_result))
+`;
+    $('pgStatus').textContent = window.Sk ? 'Running...' : 'Loading Python, this takes a moment the first time...';
+    let r;
+    try { r = await runPy(ed.value + '\n' + harness); }
+    catch (e) { $('pgStatus').textContent = ''; log(`<span class="err">${esc(e.message)}. Check your internet connection.</span>`); return; }
+    $('pgStatus').textContent = '';
+    log(`<b>my_list.${esc(label)}</b>`);
+    let newVals = null, loop = false, result = null;
+    r.out.split('\n').forEach(line => {
+      if (line.startsWith('@@STATE ')) {
+        const m = line.match(/^@@STATE (\[.*\]) (True|False)$/);
+        if (m) { try { newVals = JSON.parse(m[1].replace(/'/g, '"')); } catch (e) { newVals = null; } loop = m[2] === 'True'; }
+      } else if (line.startsWith('@@RESULT ')) result = line.slice(9);
+      else if (line !== '') log(esc(line));
+    });
+    if (r.err) { log(`<span class="err">${esc(r.err)}</span>`); return; }
+    if (loop) { log('<span class="err">The list has more than 30 nodes or loops back on itself. Showing the first 30.</span>'); newVals = newVals.slice(0, 30); }
+    if (result && result !== 'None') log('returned ' + esc(result));
+    if (newVals) render(newVals, true);
+  }
+  const V = () => { const v = parseInt($('pgV').value, 10); return Number.isFinite(v) ? v : 5; };
+  const BTN = [
+    ['prepend', () => [`prepend(${V()})`]],
+    ['append', () => [`append(${V()})`]],
+    ['remove', () => [`remove(${V()})`]],
+    ['remove_first', () => ['remove_first()']]
+  ];
+  BTN.forEach(([name, f]) => {
+    const b = document.createElement('button'); b.textContent = name;
+    b.onclick = async () => { const [e] = f(); b.disabled = true; await call(e, e); b.disabled = false; };
+    $('pgBtns').appendChild(b);
+  });
+  $('pgResetList').onclick = () => { render([10,20,30], true); log('<span class="mut">List reset to 10, 20, 30</span>'); };
+  $('pgResetCode').onclick = () => { ed.value = START; };
+})();
+
+/* ---------- navigation ---------- */
+const slides = [...document.querySelectorAll('.slide')];
+let cur = 0;
+function goSlide(i){
+  i = Math.max(0, Math.min(slides.length - 1, i));
+  PLAYERS.forEach(p => p.pause());
+  slides[cur].classList.remove('on');
+  cur = i;
+  slides[cur].classList.add('on');
+  $('stage').scrollTop = 0;
+  $('cnt').textContent = `${cur+1} / ${slides.length}`;
+  $('ttl').textContent = slides[cur].dataset.title;
+  $('prev').disabled = cur === 0;
+  $('next').disabled = cur === slides.length - 1;
+  try { history.replaceState(null, '', '#' + (cur + 1)); } catch (e) {}
+}
+$('prev').onclick = () => goSlide(cur - 1);
+$('next').onclick = () => goSlide(cur + 1);
+$('fs').onclick = () => {
+  try {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else { const p = document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); if (p && p.catch) p.catch(() => {}); }
+  } catch (e) {}
+};
+document.addEventListener('keydown', e => {
+  if (e.target.closest('input, textarea, select')) return;
+  if (e.key === 'ArrowRight' || e.key === 'PageDown') { e.preventDefault(); goSlide(cur + 1); }
+  else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); goSlide(cur - 1); }
+});
+const start = parseInt((location.hash || '').slice(1), 10);
+slides[0].classList.add('on');
+goSlide(Number.isFinite(start) ? start - 1 : 0);
+})();
+</script>
+</body>
+</html>
