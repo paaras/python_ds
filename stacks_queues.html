@@ -1,0 +1,1236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stacks and Queues</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#fff;color:#000;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.slide{display:none;position:absolute;inset:0;padding:40px 64px 84px;overflow:auto}
+.slide.active{display:block}
+h1{font-size:42px;font-weight:600;margin:0 0 30px}
+.slide p,.slide li{font-size:24px;line-height:1.45}
+.slide p{margin:0 0 14px}
+ul{padding-left:1.2em;margin:0 0 18px}
+li{margin-bottom:12px}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.9em;background:#f1f1f1;padding:1px 5px;border-radius:3px}
+.split{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,7fr);gap:56px;align-items:start}
+.codecols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:44px;align-items:start}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:start}
+.small{font-size:19px !important;color:#444}
+button{font:inherit;font-size:20px;padding:8px 24px;border:2px solid #000;background:#fff;color:#000;border-radius:6px;cursor:pointer}
+button:hover:not(:disabled){background:#eee}
+button:disabled{opacity:.3;cursor:default}
+.btns{display:flex;gap:12px;align-items:center;margin:18px 0 0}
+.count{font-size:17px;color:#666;margin-left:6px}
+.cap{font-size:24px !important;line-height:1.45;min-height:3.2em;margin:18px 0 0 !important}
+.call{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:26px;min-height:1.5em;margin:0 0 10px}
+.result{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:26px;min-height:1.5em;margin:18px 0 0}
+.err{color:#b00000}
+.rowname{font-size:21px !important;font-weight:600;margin:0 0 4px !important}
+.moved{font-size:21px !important;margin:10px 0 26px !important}
+pre.code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:16px;line-height:1.55;background:#fafafa;border:1px solid #ccc;padding:12px 0;margin:0;overflow:auto}
+pre.code .ln{display:block;padding:0 16px;white-space:pre}
+pre.code .ln.cur{background:#ffe58a}
+pre.code .str{color:#555}
+table{border-collapse:collapse;font-size:22px;margin:0 0 22px}
+th,td{border:1px solid #000;padding:10px 18px;text-align:left}
+th{font-weight:600}
+nav{position:fixed;bottom:16px;right:24px;display:flex;gap:8px;align-items:center;font-size:16px;background:#fff}
+nav button{font-size:18px;padding:4px 14px}
+/* horizontal list */
+.lv{position:relative;height:126px;min-width:76px}
+.lv .cell{top:4px}
+.cell{position:absolute;width:68px;height:68px;border:2px solid #000;background:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;transition:left .45s ease,bottom .45s ease,opacity .35s ease,transform .35s ease}
+.cell.enter,.cell.leave{opacity:0;transform:translateY(-30px)}
+.cell.hl{background:#ffe58a}
+.lbl{position:absolute;top:80px;width:110px;margin-left:-21px;white-space:nowrap;text-align:center;font-size:18px;line-height:1.3}
+.emptylbl{position:absolute;color:#999;font-size:22px;transition:opacity .3s}
+.lv .emptylbl{top:24px;left:6px}
+/* vertical stack */
+.sv{position:relative;width:236px;border:3px solid #000;border-top:none;margin:0 0 0 2px}
+.sv .cell{left:15px;width:200px;height:52px}
+.sv .emptylbl{bottom:16px;left:0;width:100%;text-align:center}
+.toplbl{position:absolute;left:252px;font-size:22px;white-space:nowrap;transition:bottom .45s ease,opacity .3s}
+.lsvg{width:100%;height:auto;display:block}
+.lsvg text{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+/* memory */
+.slots{display:flex;gap:6px;margin:8px 0;flex-wrap:wrap}
+.slot{width:48px;height:48px;border:2px dashed #aaa;display:flex;align-items:center;justify-content:center;font-size:21px}
+.slot.full{border:2px solid #000}
+.mnodes{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:8px 0;font-size:20px}
+.mnode{display:flex;border:2px solid #000}
+.mnode span{width:48px;height:48px;display:flex;align-items:center;justify-content:center;font-size:21px}
+.mnode span+span{border-left:2px solid #000;width:32px}
+input[type=range]{width:100%;margin:6px 0 22px}
+</style>
+</head>
+<body>
+
+<!-- 1 -->
+<section class="slide" data-setup="deckStackIntro">
+<h1>What is a stack</h1>
+<div class="split">
+<div>
+<ul>
+<li>A stack is a collection where items are added and removed in one place only, called the top</li>
+<li>The last item added is the first item removed</li>
+<li>This rule is called LIFO: Last In, First Out</li>
+<li>Think of a stack of plates, you put a new plate on top, and you take a plate from the top</li>
+</ul>
+</div>
+<div>
+<div class="view"></div>
+<p class="cap"></p>
+<div class="btns"><button class="back">previous step</button><button class="fwd">next step</button><span class="count"></span></div>
+</div>
+</div>
+</section>
+
+<!-- 2 -->
+<section class="slide" data-setup="stackPlay" data-start="A,B,C">
+<h1>Stack operations</h1>
+<div class="split">
+<div>
+<ul>
+<li><code>push(item)</code>: add an item to the top</li>
+<li><code>pop()</code>: remove the top item and return it</li>
+<li><code>peek()</code>: return the top item without removing it</li>
+</ul>
+</div>
+<div>
+<div class="view"></div>
+<p class="result"></p>
+<div class="btns"><button data-act="push">push</button><button data-act="pop">pop</button><button data-act="peek">peek</button></div>
+</div>
+</div>
+</section>
+
+<!-- 4 -->
+<section class="slide" data-setup="stackEnds">
+<h1>Stack using a list: where is the top</h1>
+<div class="split">
+<div>
+<ul>
+<li>The top of the stack could be index 0 of the list or the last index of the list</li>
+<li>Adding or removing at the last index: no other items move</li>
+<li>Adding or removing at index 0: every other item has to shift one position</li>
+<li>So the top of the stack is the last index of the list</li>
+</ul>
+</div>
+<div>
+<p class="rowname">Top at the last index</p>
+<div class="view vA"></div>
+<p class="moved mA"></p>
+<p class="rowname">Top at index 0</p>
+<div class="view vB"></div>
+<p class="moved mB"></p>
+<div class="btns"><button data-act="push">push</button><button data-act="pop">pop</button></div>
+</div>
+</div>
+</section>
+
+<!-- 5 -->
+<section class="slide" data-setup="codeListStack">
+<h1>Stack using a list: code</h1>
+<div class="codecols">
+<pre class="code"></pre>
+<div>
+<p class="call"></p>
+<p class="small">self.items</p>
+<div class="view"></div>
+<p class="cap"></p>
+<div class="btns"><button class="back">previous step</button><button class="fwd">next step</button><span class="count"></span></div>
+</div>
+</div>
+</section>
+
+<!-- 6 -->
+<section class="slide" data-setup="deckHeadTop">
+<h1>Stack using a linked list: where is the top</h1>
+<div class="split">
+<div>
+<ul>
+<li>We can reach the head of a linked list directly, reaching the last node means walking through every node</li>
+<li>So the head is the top</li>
+<li><b>push</b>: create a new node, point it at the current head, make it the new head</li>
+<li><b>pop</b>: save the head's value, move head to the next node, return the value</li>
+<li><b>peek</b>: return the head's value</li>
+</ul>
+</div>
+<div>
+<div class="view"></div>
+<p class="cap"></p>
+<div class="btns"><button class="back">previous step</button><button class="fwd">next step</button><span class="count"></span></div>
+</div>
+</div>
+</section>
+
+<!-- 7 -->
+<section class="slide" data-setup="codeLinkedStack">
+<h1>Stack using a linked list: code</h1>
+<div class="codecols">
+<pre class="code"></pre>
+<div>
+<p class="call"></p>
+<div class="view"></div>
+<p class="cap"></p>
+<div class="btns"><button class="back">previous step</button><button class="fwd">next step</button><span class="count"></span></div>
+</div>
+</div>
+</section>
+
+<!-- 8 -->
+<section class="slide" data-setup="resizeDemo">
+<h1>Stack time complexity</h1>
+<div class="split">
+<div>
+<table>
+<tr><th>Operation</th><th>List</th><th>Linked list</th></tr>
+<tr><td>push</td><td>O(1) on average</td><td>O(1)</td></tr>
+<tr><td>pop</td><td>O(1)</td><td>O(1)</td></tr>
+<tr><td>peek</td><td>O(1)</td><td>O(1)</td></tr>
+</table>
+<ul>
+<li>A list has a fixed amount of space set aside, when it is full, Python moves the list to a bigger block of memory and copies every item over</li>
+<li>That copy is O(n), but it happens rarely, so on average <code>append</code> is O(1)</li>
+<li>A linked list never copies, every push creates one new node</li>
+</ul>
+</div>
+<div>
+<div class="rz"></div>
+<p class="cap"></p>
+<div class="btns"><button data-act="append">append</button></div>
+</div>
+</div>
+</section>
+
+<!-- 9 -->
+<section class="slide" data-setup="memoryDemo">
+<h1>Stack space complexity</h1>
+<div class="split">
+<div>
+<ul>
+<li>Both versions use O(n) space for n items</li>
+<li>A list uses one slot per item, plus some spare slots left over from growing</li>
+<li>A linked list uses one node per item, each node holds the item and a <code>next</code> pointer</li>
+<li>So a linked list uses more memory per item, but in both cases memory grows in proportion to n</li>
+</ul>
+</div>
+<div>
+<p class="rowname">Items: <span class="mn"></span></p>
+<input type="range" min="0" max="8" value="4">
+<p class="rowname">List</p>
+<div class="mlist"></div>
+<p class="small mlistc"></p>
+<p class="rowname" style="margin-top:22px !important">Linked list</p>
+<div class="mnodes"></div>
+<p class="small mnodec"></p>
+</div>
+</div>
+</section>
+
+<!-- 10 -->
+<section class="slide" data-setup="deckQueueIntro">
+<h1>What is a queue</h1>
+<div class="split">
+<div>
+<ul>
+<li>A queue is a collection where items are added at the back and removed from the front</li>
+<li>The first item added is the first item removed</li>
+<li>This rule is called FIFO: First In, First Out</li>
+<li>Think of people waiting in line, new people join at the back, and the person at the front is served first</li>
+</ul>
+</div>
+<div>
+<div class="view"></div>
+<p class="cap"></p>
+<div class="btns"><button class="back">previous step</button><button class="fwd">next step</button><span class="count"></span></div>
+</div>
+</div>
+</section>
+
+<!-- 11 -->
+<section class="slide" data-setup="queuePlay" data-start="A,B,C">
+<h1>Queue operations</h1>
+<div class="split">
+<div>
+<ul>
+<li><code>enqueue(item)</code>: add an item to the back</li>
+<li><code>dequeue()</code>: remove the front item and return it</li>
+<li><code>peek()</code>: return the front item without removing it</li>
+</ul>
+</div>
+<div>
+<div class="view"></div>
+<p class="result"></p>
+<div class="btns"><button data-act="enqueue">enqueue</button><button data-act="dequeue">dequeue</button><button data-act="peek">peek</button></div>
+</div>
+</div>
+</section>
+
+<!-- 12 -->
+<section class="slide" data-setup="compareDemo">
+<h1>Stack vs queue with the same input</h1>
+<p>Both get the same items in the same order, remove them and compare</p>
+<div class="two">
+<div><p class="rowname">Stack</p><div class="view vS"></div><p class="result oS"></p></div>
+<div><p class="rowname">Queue</p><div class="view vQ"></div><p class="result oQ"></p></div>
+</div>
+<div class="btns"><button data-act="add">add</button><button data-act="remove">remove</button></div>
+</section>
+
+<!-- 14 -->
+<section class="slide" data-setup="queueEnds">
+<h1>Queue using a list: the problem</h1>
+<div class="split">
+<div>
+<ul>
+<li>A queue adds on one side and removes from the other, so one of them has to be index 0</li>
+<li>Option A: enqueue with <code>append()</code>, dequeue with <code>pop(0)</code>, dequeue shifts every item</li>
+<li>Option B: enqueue with <code>insert(0, item)</code>, dequeue with <code>pop()</code>, enqueue shifts every item</li>
+<li>Either way, one of the two operations is O(n)</li>
+</ul>
+</div>
+<div>
+<p class="rowname">Option A: front at index 0</p>
+<div class="view vA"></div>
+<p class="moved mA"></p>
+<p class="rowname">Option B: front at the last index</p>
+<div class="view vB"></div>
+<p class="moved mB"></p>
+<div class="btns"><button data-act="enqueue">enqueue</button><button data-act="dequeue">dequeue</button></div>
+</div>
+</div>
+</section>
+
+<!-- 15 -->
+<section class="slide" data-setup="codeListQueue">
+<h1>Queue using a list: code</h1>
+<div class="codecols">
+<pre class="code"></pre>
+<div>
+<p class="call"></p>
+<p class="small">self.items</p>
+<div class="view"></div>
+<p class="cap"></p>
+<div class="btns"><button class="back">previous step</button><button class="fwd">next step</button><span class="count"></span></div>
+</div>
+</div>
+</section>
+
+<!-- 16 -->
+<section class="slide" data-setup="deckHeadTail">
+<h1>Queue using a linked list: head and tail</h1>
+<div class="split">
+<div>
+<ul>
+<li>A stack only needed a pointer to the head, a queue needs a pointer to the head and a pointer to the tail</li>
+<li><b>dequeue</b> removes from the head, the same way stack pop does</li>
+<li><b>enqueue</b> adds at the tail: link the current tail to the new node, then move tail to the new node</li>
+<li>Removing the tail would mean walking the whole list to find the node before it</li>
+</ul>
+</div>
+<div>
+<div class="view"></div>
+<p class="cap"></p>
+<div class="btns"><button class="back">previous step</button><button class="fwd">next step</button><span class="count"></span></div>
+</div>
+</div>
+</section>
+
+<!-- 18 -->
+<section class="slide" data-setup="codeLinkedQueue">
+<h1>Queue using a linked list: code</h1>
+<div class="codecols">
+<pre class="code"></pre>
+<div>
+<p class="call"></p>
+<div class="view"></div>
+<p class="cap"></p>
+<div class="btns"><button class="back">previous step</button><button class="fwd">next step</button><span class="count"></span></div>
+<p class="small" style="margin-top:22px">Uses the same <code>Node</code> class as the linked list stack</p>
+</div>
+</div>
+</section>
+
+<!-- 19 -->
+<section class="slide">
+<h1>Queue time and space complexity</h1>
+<table>
+<tr><th>Operation</th><th>List (option A)</th><th>Linked list</th></tr>
+<tr><td>enqueue</td><td>O(1) on average</td><td>O(1)</td></tr>
+<tr><td>dequeue</td><td>O(n)</td><td>O(1)</td></tr>
+<tr><td>peek</td><td>O(1)</td><td>O(1)</td></tr>
+<tr><td>space</td><td>O(n)</td><td>O(n)</td></tr>
+</table>
+<ul>
+<li>With option B the costs swap: enqueue becomes O(n) and dequeue becomes O(1), the list always has one slow operation</li>
+<li>The linked list keeps all three operations O(1) because it has direct access to both the head and the tail</li>
+<li>Space is O(n) for both, the linked list uses more memory per item, because each node also stores a <code>next</code> pointer</li>
+</ul>
+</section>
+
+<!-- 20 -->
+<section class="slide">
+<h1>Summary</h1>
+<table>
+<tr><th></th><th>push / enqueue</th><th>pop / dequeue</th><th>peek</th><th>space</th></tr>
+<tr><td>Stack, list</td><td>O(1) on average</td><td>O(1)</td><td>O(1)</td><td>O(n)</td></tr>
+<tr><td>Stack, linked list</td><td>O(1)</td><td>O(1)</td><td>O(1)</td><td>O(n)</td></tr>
+<tr><td>Queue, list</td><td>O(1) on average</td><td>O(n)</td><td>O(1)</td><td>O(n)</td></tr>
+<tr><td>Queue, linked list</td><td>O(1)</td><td>O(1)</td><td>O(1)</td><td>O(n)</td></tr>
+</table>
+</section>
+
+<nav><button id="prev">‹</button><span id="counter"></span><button id="nextSlide">›</button></nav>
+
+<script type="text/plain" id="src-liststack">
+class ListStack:
+    def __init__(self):
+        self.items = []
+
+    def push(self, item):
+        self.items.append(item)
+
+    def pop(self):
+        if len(self.items) == 0:
+            print("Stack is empty")
+            return None
+        return self.items.pop()
+
+    def peek(self):
+        if len(self.items) == 0:
+            print("Stack is empty")
+            return None
+        return self.items[-1]
+</script>
+
+<script type="text/plain" id="src-linkedstack">
+class Node:
+    def __init__(self, value):
+        self.value = value
+        self.next = None
+
+class LinkedStack:
+    def __init__(self):
+        self.head = None
+
+    def push(self, item):
+        new_node = Node(item)
+        new_node.next = self.head
+        self.head = new_node
+
+    def pop(self):
+        if self.head is None:
+            print("Stack is empty")
+            return None
+        value = self.head.value
+        self.head = self.head.next
+        return value
+
+    def peek(self):
+        if self.head is None:
+            print("Stack is empty")
+            return None
+        return self.head.value
+</script>
+
+<script type="text/plain" id="src-listqueue">
+class ListQueue:
+    def __init__(self):
+        self.items = []
+
+    def enqueue(self, item):
+        self.items.append(item)
+
+    def dequeue(self):
+        if len(self.items) == 0:
+            print("Queue is empty")
+            return None
+        return self.items.pop(0)
+
+    def peek(self):
+        if len(self.items) == 0:
+            print("Queue is empty")
+            return None
+        return self.items[0]
+</script>
+
+<script type="text/plain" id="src-linkedqueue">
+class LinkedQueue:
+    def __init__(self):
+        self.head = None
+        self.tail = None
+
+    def enqueue(self, item):
+        new_node = Node(item)
+        if self.tail is None:
+            self.head = new_node
+            self.tail = new_node
+        else:
+            self.tail.next = new_node
+            self.tail = new_node
+
+    def dequeue(self):
+        if self.head is None:
+            print("Queue is empty")
+            return None
+        value = self.head.value
+        self.head = self.head.next
+        if self.head is None:
+            self.tail = None
+        return value
+
+    def peek(self):
+        if self.head is None:
+            print("Queue is empty")
+            return None
+        return self.head.value
+</script>
+
+<script>
+/* ================= helpers ================= */
+let _id = 0;
+const nid = () => 'i' + (++_id);
+const $ = (r, s) => r.querySelector(s);
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const NS = 'http://www.w3.org/2000/svg';
+const src = id => document.getElementById(id).textContent.replace(/^\n/, '').replace(/\s+$/, '');
+const C = s => `<code>${s}</code>`;
+const ERR = t => `<span class="err">${t}</span>`;
+const letter = n => String.fromCharCode(65 + n % 26);
+const mk = vals => vals.map(v => ({ id: nid(), val: v }));
+function on(sl, act, fn) { const b = sl.querySelector(`[data-act="${act}"]`); if (b) b.addEventListener('click', fn); }
+
+function renderCode(pre, text) {
+  pre.innerHTML = text.split('\n').map(l => {
+    const e = esc(l).replace(/("[^"]*")|\b(class|def|if|else|return|raise|is|None|not)\b/g,
+      (m, s, k) => s ? `<span class="str">${s}</span>` : `<b>${k}</b>`);
+    return `<span class="ln">${e || ' '}</span>`;
+  }).join('');
+}
+function hlLine(pre, line) {
+  if (pre) pre.querySelectorAll('.ln').forEach((el, i) => el.classList.toggle('cur', i === line));
+}
+
+/* ================= horizontal list ================= */
+const CELL = 76;
+class ListView {
+  constructor(el, { index = true, marks = null } = {}) {
+    Object.assign(this, { el, index, marks });
+    el.classList.add('lv');
+    this.map = new Map();
+    this.lb = document.createElement('div'); el.appendChild(this.lb);
+    this.empty = document.createElement('div'); this.empty.className = 'emptylbl'; this.empty.textContent = 'empty'; el.appendChild(this.empty);
+  }
+  // stagger: 1 = items slide left one after another, -1 = items slide right one after another
+  render(items, { hl = null, stagger = 0 } = {}) {
+    const ids = new Set(items.map(i => i.id));
+    for (const [id, d] of [...this.map]) {
+      if (!ids.has(id)) {
+        d.style.transitionDelay = '0ms';
+        d.classList.add('leave');
+        this.map.delete(id);
+        setTimeout(() => d.remove(), 450);
+      }
+    }
+    const n = items.length;
+    items.forEach((it, i) => {
+      const left = i * CELL + 'px';
+      let d = this.map.get(it.id);
+      if (!d) {
+        d = document.createElement('div');
+        d.className = 'cell enter';
+        d.textContent = it.val;
+        d.style.left = left;
+        d.style.transitionDelay = stagger < 0 ? (n * 110 + 150) + 'ms' : '0ms';
+        this.el.appendChild(d);
+        this.map.set(it.id, d);
+        void d.offsetWidth;
+        d.classList.remove('enter');
+      } else {
+        const moved = d.style.left !== left;
+        d.style.transitionDelay = (moved && stagger) ? ((stagger > 0 ? i : n - 1 - i) * 110) + 'ms' : '0ms';
+        d.style.left = left;
+      }
+      d.classList.toggle('hl', it.id === hl);
+    });
+    let h = '';
+    for (let i = 0; i < n; i++) {
+      const parts = [];
+      if (this.index) parts.push(i);
+      const m = this.marks ? this.marks(i, n) : '';
+      if (m) parts.push(`<b>${m}</b>`);
+      h += `<div class="lbl" style="left:${i * CELL}px">${parts.join('<br>')}</div>`;
+    }
+    this.lb.innerHTML = h;
+    this.empty.style.opacity = n ? 0 : 1;
+  }
+}
+const frontBack = (i, n) => [i === 0 ? 'front' : '', i === n - 1 ? 'back' : ''].filter(Boolean).join(', ');
+
+/* ================= vertical stack ================= */
+class StackView {
+  constructor(el, max = 6) {
+    this.el = el; this.h = 60;
+    el.classList.add('sv');
+    el.style.height = (max * this.h + 10) + 'px';
+    this.map = new Map();
+    this.top = document.createElement('div'); this.top.className = 'toplbl'; this.top.textContent = '← top'; el.appendChild(this.top);
+    this.empty = document.createElement('div'); this.empty.className = 'emptylbl'; this.empty.textContent = 'empty'; el.appendChild(this.empty);
+  }
+  render(items, hl = null) {
+    const ids = new Set(items.map(i => i.id));
+    for (const [id, d] of [...this.map]) {
+      if (!ids.has(id)) { d.classList.add('leave'); this.map.delete(id); setTimeout(() => d.remove(), 450); }
+    }
+    items.forEach((it, i) => {
+      let d = this.map.get(it.id);
+      const b = (6 + i * this.h) + 'px';
+      if (!d) {
+        d = document.createElement('div');
+        d.className = 'cell enter';
+        d.textContent = it.val;
+        d.style.bottom = b;
+        this.el.appendChild(d);
+        this.map.set(it.id, d);
+        void d.offsetWidth;
+        d.classList.remove('enter');
+      } else d.style.bottom = b;
+      d.classList.toggle('hl', it.id === hl);
+    });
+    const n = items.length;
+    this.top.style.bottom = (6 + (n - 1) * this.h + 12) + 'px';
+    this.top.style.opacity = n ? 1 : 0;
+    this.empty.style.opacity = n ? 0 : 1;
+  }
+}
+
+/* ================= linked list (SVG) ================= */
+const NW = 120, NH = 56, SP = 175, SX = 150, R1 = 74, R2 = 210;
+class LinkedView {
+  constructor(el, { tail = false, width = 900 } = {}) {
+    this.tail = tail; this.cur = {}; this.vals = {}; this.raf = null;
+    this.mid = 'm' + nid();
+    this.svg = document.createElementNS(NS, 'svg');
+    this.svg.setAttribute('viewBox', `0 0 ${width} 300`);
+    this.svg.classList.add('lsvg');
+    el.appendChild(this.svg);
+  }
+  layout(s) {
+    const pos = {}, chain = [];
+    let c = s.head, guard = 0;
+    while (c != null && s.nodes[c] && guard++ < 20) { chain.push(c); c = s.nodes[c].next; }
+    chain.forEach((id, i) => pos[id] = { x: SX + i * SP, y: R1 });
+    const used = new Set();
+    for (const id in s.nodes) {
+      if (pos[id]) continue;
+      let x = (chain.length && s.nodes[id].next === chain[0]) ? SX - 140 : SX + chain.length * SP;
+      while (used.has(x)) x += SP;
+      used.add(x);
+      pos[id] = { x, y: R2 };
+    }
+    return pos;
+  }
+  set(s) {
+    const pos = this.layout(s), tgt = {};
+    for (const id in pos) tgt[id] = { ...pos[id], o: s.faded.includes(id) ? 0.3 : 1 };
+    for (const id in this.cur) if (!tgt[id]) tgt[id] = { ...this.cur[id], o: 0 };
+    for (const id in s.nodes) this.vals[id] = s.nodes[id].val;
+    const from = {};
+    for (const id in tgt) from[id] = this.cur[id] ? { ...this.cur[id] } : { ...tgt[id], o: 0 };
+    cancelAnimationFrame(this.raf);
+    const t0 = performance.now(), D = 550;
+    const tick = now => {
+      const t = Math.min(1, (now - t0) / D);
+      const e = t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      const p = {};
+      for (const id in tgt) {
+        const a = from[id], b = tgt[id];
+        p[id] = { x: a.x + (b.x - a.x) * e, y: a.y + (b.y - a.y) * e, o: a.o + (b.o - a.o) * e };
+      }
+      this.cur = p;
+      this.draw(p, s);
+      if (t < 1) this.raf = requestAnimationFrame(tick);
+      else for (const id in p) if (!s.nodes[id]) delete this.cur[id];
+    };
+    this.raf = requestAnimationFrame(tick);
+  }
+  draw(p, s) {
+    const N = [], A = [], L = [];
+    for (const id in p) {
+      const a = p[id], hl = s.hl === id;
+      N.push(`<g opacity="${a.o.toFixed(3)}"><rect x="${a.x}" y="${a.y}" width="${NW}" height="${NH}" fill="${hl ? '#ffe58a' : '#fff'}" stroke="#000" stroke-width="2.5"/>` +
+        `<line x1="${a.x + NW - 36}" y1="${a.y}" x2="${a.x + NW - 36}" y2="${a.y + NH}" stroke="#000" stroke-width="2.5"/>` +
+        `<text x="${a.x + 42}" y="${a.y + 37}" text-anchor="middle" font-size="27">${esc(this.vals[id] ?? '')}</text>` +
+        `<circle cx="${a.x + NW - 18}" cy="${a.y + NH / 2}" r="5"/></g>`);
+    }
+    for (const id in s.nodes) {
+      const a = p[id]; if (!a) continue;
+      const nx = s.nodes[id].next, sx = a.x + NW - 18, sy = a.y + NH / 2;
+      if (nx && p[nx]) {
+        const b = p[nx];
+        A.push(`<line x1="${sx}" y1="${sy}" x2="${b.x - 4}" y2="${b.y + NH / 2}" stroke="#000" stroke-width="2.5" marker-end="url(#${this.mid})" opacity="${a.o.toFixed(3)}"/>`);
+      } else if (!nx) {
+        A.push(`<g opacity="${a.o.toFixed(3)}"><line x1="${sx}" y1="${sy}" x2="${a.x + NW + 24}" y2="${sy}" stroke="#000" stroke-width="2.5" marker-end="url(#${this.mid})"/><text x="${a.x + NW + 30}" y="${sy + 7}" font-size="20">None</text></g>`);
+      }
+    }
+    const names = {};
+    const add = (n, id) => { if (id != null) (names[id] = names[id] || []).push(n); };
+    add('head', s.head);
+    if (this.tail) add('tail', s.tail);
+    for (const n in s.labels) add(n, s.labels[n]);
+    for (const id in names) {
+      const a = p[id]; if (!a) continue;
+      const ty = a.y < 150 ? a.y - 14 : a.y + NH + 26;
+      L.push(`<text x="${a.x + NW / 2}" y="${ty}" text-anchor="middle" font-size="21" font-weight="600" opacity="${Math.min(1, a.o / 0.3).toFixed(3)}">${names[id].join(', ')}</text>`);
+    }
+    if (s.head == null) L.push(`<text x="${SX}" y="34" font-size="21" font-weight="600">head = None</text>`);
+    if (this.tail && s.tail == null) L.push(`<text x="${SX + 190}" y="34" font-size="21" font-weight="600">tail = None</text>`);
+    this.svg.innerHTML = `<defs><marker id="${this.mid}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#000"/></marker></defs>` + N.join('') + A.join('') + L.join('');
+  }
+}
+
+/* linked list model used to script the walkthroughs */
+class LM {
+  constructor() { this.nodes = {}; this.head = null; this.tail = null; this.labels = {}; this.faded = []; this.hl = null; this.k = 0; }
+  node(v) { const id = 'n' + (++this.k); this.nodes[id] = { val: v, next: null }; return id; }
+  build(vals) {
+    this.nodes = {}; this.head = null; this.tail = null; this.labels = {}; this.faded = []; this.hl = null;
+    let prev = null;
+    vals.forEach(v => { const id = this.node(v); if (prev) this.nodes[prev].next = id; else this.head = id; prev = id; });
+    this.tail = prev;
+  }
+  snap() { return JSON.parse(JSON.stringify({ nodes: this.nodes, head: this.head, tail: this.tail, labels: this.labels, faded: this.faded, hl: this.hl })); }
+  find(v) { return Object.keys(this.nodes).find(id => this.nodes[id].val === v); }
+}
+
+/* ================= back / next walkthrough ================= */
+class Deck {
+  constructor(sl, steps, show, code = null) {
+    Object.assign(this, { sl, steps, show, code });
+    this.i = 0;
+    this.cap = $(sl, '.cap'); this.call = $(sl, '.call'); this.cnt = $(sl, '.count');
+    this.backBtn = $(sl, '.back'); this.fwdBtn = $(sl, '.fwd');
+    this.backBtn.onclick = () => this.go(this.i - 1, -1);
+    this.fwdBtn.onclick = () => this.i === this.steps.length - 1 ? this.go(0, 0) : this.go(this.i + 1, 1);
+    this.go(0, 0);
+  }
+  go(i, dir) {
+    this.i = i;
+    const s = this.steps[i];
+    this.show(s, dir);
+    this.cap.innerHTML = s.cap;
+    if (this.call) this.call.innerHTML = s.call || '';
+    hlLine(this.code, s.line);
+    this.cnt.textContent = `step ${i + 1} of ${this.steps.length}`;
+    this.backBtn.disabled = i === 0;
+    this.fwdBtn.textContent = i === this.steps.length - 1 ? 'start over' : 'next step';
+  }
+}
+
+/* ================= slide setups ================= */
+const SETUP = {};
+
+/* 1: stack idea */
+SETUP.deckStackIntro = sl => {
+  const sv = new StackView($(sl, '.view'));
+  const [a, b, c] = mk(['A', 'B', 'C']);
+  const steps = [
+    { items: [], cap: 'Empty stack' },
+    { items: [a], cap: 'Add A' },
+    { items: [a, b], cap: 'Add B' },
+    { items: [a, b, c], cap: 'Add C' },
+    { items: [a, b], cap: 'Remove: C comes off first' },
+    { items: [a], cap: 'Remove: B' },
+    { items: [], cap: 'Remove: A, first in, last out' },
+  ];
+  new Deck(sl, steps, s => sv.render(s.items));
+};
+
+/* 10: queue idea */
+SETUP.deckQueueIntro = sl => {
+  const lv = new ListView($(sl, '.view'), { index: false, marks: frontBack });
+  const [a, b, c] = mk(['A', 'B', 'C']);
+  const steps = [
+    { items: [], cap: 'Empty queue' },
+    { items: [a], cap: 'A joins' },
+    { items: [a, b], cap: 'B joins at the back' },
+    { items: [a, b, c], cap: 'C joins at the back' },
+    { items: [b, c], st: 1, cap: 'A leaves first' },
+    { items: [c], st: 1, cap: 'B leaves' },
+    { items: [], cap: 'C leaves last, first in, first out' },
+  ];
+  new Deck(sl, steps, (s, dir) => lv.render(s.items, { stagger: dir > 0 ? (s.st || 0) : 0 }));
+};
+
+/* 2, 3: stack free play */
+SETUP.stackPlay = sl => {
+  const start = (sl.dataset.start || '').split(',').filter(Boolean);
+  const sv = new StackView($(sl, '.view'));
+  const out = $(sl, '.result');
+  let items = mk(start), n = start.length, t;
+  sv.render(items);
+  on(sl, 'push', () => {
+    if (items.length >= 6) { out.innerHTML = 'Stack is full'; return; }
+    const v = letter(n++);
+    items = [...items, { id: nid(), val: v }];
+    sv.render(items);
+    out.innerHTML = `push('${v}')`;
+  });
+  on(sl, 'pop', () => {
+    if (!items.length) { out.innerHTML = 'pop() printed "Stack is empty"'; return; }
+    const top = items[items.length - 1];
+    items = items.slice(0, -1);
+    sv.render(items);
+    out.innerHTML = `pop()  → '${top.val}'`;
+  });
+  on(sl, 'peek', () => {
+    if (!items.length) { out.innerHTML = 'peek() printed "Stack is empty"'; return; }
+    const top = items[items.length - 1];
+    sv.render(items, top.id);
+    clearTimeout(t); t = setTimeout(() => sv.render(items), 1200);
+    out.innerHTML = `peek()  → '${top.val}'`;
+  });
+};
+
+/* 11, 13: queue free play */
+SETUP.queuePlay = sl => {
+  const start = (sl.dataset.start || '').split(',').filter(Boolean);
+  const lv = new ListView($(sl, '.view'), { index: false, marks: frontBack });
+  const out = $(sl, '.result');
+  let items = mk(start), n = start.length, t;
+  lv.render(items);
+  on(sl, 'enqueue', () => {
+    if (items.length >= 7) { out.innerHTML = 'Queue is full'; return; }
+    const v = letter(n++);
+    items = [...items, { id: nid(), val: v }];
+    lv.render(items);
+    out.innerHTML = `enqueue('${v}')`;
+  });
+  on(sl, 'dequeue', () => {
+    if (!items.length) { out.innerHTML = 'dequeue() printed "Queue is empty"'; return; }
+    const f = items[0];
+    items = items.slice(1);
+    lv.render(items, { stagger: 1 });
+    out.innerHTML = `dequeue()  → '${f.val}'`;
+  });
+  on(sl, 'peek', () => {
+    if (!items.length) { out.innerHTML = 'peek() printed "Queue is empty"'; return; }
+    const f = items[0];
+    lv.render(items, { hl: f.id });
+    clearTimeout(t); t = setTimeout(() => lv.render(items), 1200);
+    out.innerHTML = `peek()  → '${f.val}'`;
+  });
+};
+
+/* 4: top at the last index vs top at index 0 */
+SETUP.stackEnds = sl => {
+  const A = new ListView($(sl, '.vA'), { marks: (i, n) => i === n - 1 ? 'top' : '' });
+  const B = new ListView($(sl, '.vB'), { marks: (i, n) => i === 0 ? 'top' : '' });
+  const mA = $(sl, '.mA'), mB = $(sl, '.mB');
+  const start = ['A', 'B', 'C', 'D'];
+  let a = mk(start), b = mk([...start].reverse()), n = start.length;
+  A.render(a); B.render(b);
+  mA.textContent = mB.textContent = 'Click push or pop';
+  on(sl, 'push', () => {
+    if (a.length >= 7) return;
+    const v = letter(n++);
+    a = [...a, { id: nid(), val: v }];
+    const moved = b.length;
+    b = [{ id: nid(), val: v }, ...b];
+    A.render(a); B.render(b, { stagger: -1 });
+    mA.textContent = `push('${v}') moved 0 items`;
+    mB.textContent = `push('${v}') moved ${moved} items`;
+  });
+  on(sl, 'pop', () => {
+    if (!a.length) return;
+    const v = a[a.length - 1].val;
+    a = a.slice(0, -1); b = b.slice(1);
+    A.render(a); B.render(b, { stagger: 1 });
+    mA.textContent = `pop() moved 0 items`;
+    mB.textContent = `pop() moved ${b.length} items`;
+  });
+};
+
+/* 14: queue option A vs option B */
+SETUP.queueEnds = sl => {
+  const A = new ListView($(sl, '.vA'), { marks: (i, n) => [i === 0 ? 'front' : '', i === n - 1 ? 'back' : ''].filter(Boolean).join(', ') });
+  const B = new ListView($(sl, '.vB'), { marks: (i, n) => [i === n - 1 ? 'front' : '', i === 0 ? 'back' : ''].filter(Boolean).join(', ') });
+  const mA = $(sl, '.mA'), mB = $(sl, '.mB');
+  const start = ['A', 'B', 'C', 'D'];
+  let a = mk(start), b = mk([...start].reverse()), n = start.length;
+  A.render(a); B.render(b);
+  mA.innerHTML = `enqueue uses ${C('append')}, dequeue uses ${C('pop(0)')}`;
+  mB.innerHTML = `enqueue uses ${C('insert(0, item)')}, dequeue uses ${C('pop()')}`;
+  on(sl, 'enqueue', () => {
+    if (a.length >= 7) return;
+    const v = letter(n++);
+    a = [...a, { id: nid(), val: v }];
+    const moved = b.length;
+    b = [{ id: nid(), val: v }, ...b];
+    A.render(a); B.render(b, { stagger: -1 });
+    mA.textContent = `enqueue('${v}') moved 0 items`;
+    mB.textContent = `enqueue('${v}') moved ${moved} items`;
+  });
+  on(sl, 'dequeue', () => {
+    if (!a.length) return;
+    const v = a[0].val;
+    a = a.slice(1); b = b.slice(0, -1);
+    A.render(a, { stagger: 1 }); B.render(b);
+    mA.textContent = `dequeue() moved ${a.length} items`;
+    mB.textContent = `dequeue() moved 0 items`;
+  });
+};
+
+/* 12: stack vs queue */
+SETUP.compareDemo = sl => {
+  const sv = new StackView($(sl, '.vS'));
+  const qv = new ListView($(sl, '.vQ'), { index: false, marks: frontBack });
+  const oS = $(sl, '.oS'), oQ = $(sl, '.oQ');
+  let s = [], q = [], n = 0, rs = [], rq = [];
+  sv.render(s); qv.render(q);
+  const show = () => {
+    oS.innerHTML = rs.length ? 'removed: ' + rs.join(' ') : '';
+    oQ.innerHTML = rq.length ? 'removed: ' + rq.join(' ') : '';
+  };
+  on(sl, 'add', () => {
+    if (s.length >= 6) return;
+    if (!s.length) { rs = []; rq = []; show(); }
+    const v = letter(n++);
+    s = [...s, { id: nid(), val: v }]; q = [...q, { id: nid(), val: v }];
+    sv.render(s); qv.render(q);
+  });
+  on(sl, 'remove', () => {
+    if (!s.length) return;
+    rs.push(s[s.length - 1].val); rq.push(q[0].val);
+    s = s.slice(0, -1); q = q.slice(1);
+    sv.render(s); qv.render(q, { stagger: 1 });
+    show();
+  });
+};
+
+/* 5: list stack code walkthrough */
+SETUP.codeListStack = sl => {
+  const code = $(sl, 'pre.code'); renderCode(code, src('src-liststack'));
+  const lv = new ListView($(sl, '.view'), { marks: (i, n) => i === n - 1 ? 'top' : '' });
+  const [a, b, c] = mk(['A', 'B', 'C']);
+  let items = [];
+  const S = [];
+  const P = (call, line, cap, hl = null) => S.push({ call, line, cap, items: [...items], hl });
+  P('s = ListStack()', 2, 'Start with an empty list');
+  P("s.push('A')", 4, `Call ${C('push')}`);
+  items.push(a); P("s.push('A')", 5, `${C('append')} adds ${C("'A'")} at the last index, the top`);
+  items.push(b); P("s.push('B')", 5, `${C('append')} adds ${C("'B'")}, nothing else moves`);
+  items.push(c); P("s.push('C')", 5, `${C('append')} adds ${C("'C'")}`);
+  P('s.peek()', 13, `Call ${C('peek')}`);
+  P('s.peek()', 14, 'Not empty, continue');
+  P("s.peek()  → 'C'", 17, `Return ${C('items[-1]')}, ${C("'C'")}`, c.id);
+  P('s.pop()', 7, `Call ${C('pop')}`);
+  P('s.pop()', 8, 'Not empty, continue');
+  items.pop(); P("s.pop()  → 'C'", 11, `Remove and return ${C("'C'")}, nothing else moves`);
+  items.pop(); P("s.pop()  → 'B'", 11, `Pop again: ${C("'B'")}`);
+  items.pop(); P("s.pop()  → 'A'", 11, `Pop again: ${C("'A'")}, now empty`);
+  P('s.pop()', 7, `Call ${C('pop')} on the empty stack`);
+  P('s.pop()', 8, `Empty, so the ${C('if')} is True`);
+  P('s.pop()', 9, `Print ${C('Stack is empty')}`);
+  P('s.pop()  → None', 10, `Return ${C('None')}`);
+  new Deck(sl, S, s => lv.render(s.items, { hl: s.hl }), code);
+};
+
+/* 15: list queue code walkthrough */
+SETUP.codeListQueue = sl => {
+  const code = $(sl, 'pre.code'); renderCode(code, src('src-listqueue'));
+  const lv = new ListView($(sl, '.view'), { marks: frontBack });
+  const [a, b, c] = mk(['A', 'B', 'C']);
+  let items = [];
+  const S = [];
+  const P = (call, line, cap, o = {}) => S.push({ call, line, cap, items: [...items], hl: o.hl || null, st: o.st || 0 });
+  P('q = ListQueue()', 2, 'Start with an empty list');
+  P("q.enqueue('A')", 4, `Call ${C('enqueue')}`);
+  items.push(a); P("q.enqueue('A')", 5, `${C('append')} adds ${C("'A'")} at the last index, the back`);
+  items.push(b); P("q.enqueue('B')", 5, `Add ${C("'B'")} at the back`);
+  items.push(c); P("q.enqueue('C')", 5, `Add ${C("'C'")} at the back`);
+  P('q.peek()', 13, `Call ${C('peek')}`);
+  P('q.peek()', 14, 'Not empty, continue');
+  P("q.peek()  → 'A'", 17, `Return ${C('items[0]')}, ${C("'A'")}`, { hl: a.id });
+  P('q.dequeue()', 7, `Call ${C('dequeue')}`);
+  P('q.dequeue()', 8, 'Not empty, continue');
+  P('q.dequeue()', 11, `${C('pop(0)')} takes ${C("'A'")}`, { hl: a.id });
+  items.shift(); P("q.dequeue()  → 'A'", 11, `${C("'B'")} and ${C("'C'")} shift left`, { st: 1 });
+  items.shift(); P("q.dequeue()  → 'B'", 11, `Dequeue again: ${C("'C'")} shifts left`, { st: 1 });
+  items.shift(); P("q.dequeue()  → 'C'", 11, `Dequeue again: now empty`);
+  P('q.dequeue()', 7, `Call ${C('dequeue')} on the empty queue`);
+  P('q.dequeue()', 8, `Empty, so the ${C('if')} is True`);
+  P('q.dequeue()', 9, `Print ${C('Queue is empty')}`);
+  P('q.dequeue()  → None', 10, `Return ${C('None')}`);
+  new Deck(sl, S, (s, dir) => lv.render(s.items, { hl: s.hl, stagger: dir > 0 ? s.st : 0 }), code);
+};
+
+/* 6: why the head is the top */
+SETUP.deckHeadTop = sl => {
+  const view = new LinkedView($(sl, '.view'));
+  const m = new LM(); m.build(['A', 'B', 'C', 'D']);
+  const [a, b, c, d] = ['A', 'B', 'C', 'D'].map(v => m.find(v));
+  const S = [];
+  const P = cap => S.push({ cap, st: m.snap() });
+  P('We only keep a pointer to the head');
+  m.hl = a; P('The head is one step away');
+  m.labels = { current: a }; m.hl = null; P('To reach the last node, start at the head');
+  m.labels = { current: b }; P(`Follow ${C('next')} to B`);
+  m.labels = { current: c }; P(`Follow ${C('next')} to C`);
+  m.labels = { current: d }; P(`Follow ${C('next')} to D, n - 1 steps for n nodes`);
+  m.labels = {}; P('So the head is the top');
+  m.build(['C', 'B', 'A']);
+  P('Push A, B, C: C is the head');
+  const e = m.node('D'); m.labels = { new_node: e };
+  P(`${C("push('D')")}: create a node`);
+  m.nodes[e].next = m.head; P("Point it at C");
+  m.head = e; m.labels = {}; P('Move head to D');
+  m.hl = e; P(`${C('peek()')} returns D`);
+  m.hl = null; const old = m.head; m.head = m.nodes[old].next; m.faded = [old];
+  P(`${C('pop()')}: move head to C`);
+  delete m.nodes[old]; m.faded = []; P('Return D, the old node is freed');
+  new Deck(sl, S, s => view.set(s.st));
+};
+
+/* 7: linked stack code walkthrough */
+SETUP.codeLinkedStack = sl => {
+  const code = $(sl, 'pre.code'); renderCode(code, src('src-linkedstack'));
+  const view = new LinkedView($(sl, '.view'));
+  const m = new LM();
+  const S = [];
+  const P = (call, line, cap) => S.push({ call, line, cap, st: m.snap() });
+  P('s = LinkedStack()', 7, `Start with ${C('head = None')}`);
+  // push A
+  P("s.push('A')", 9, `Call ${C('push')}`);
+  const a = m.node('A'); m.labels = { new_node: a };
+  P("s.push('A')", 10, `Create a node for ${C("'A'")}`);
+  P("s.push('A')", 11, `Point it at ${C('head')}, which is ${C('None')}`);
+  m.head = a; m.labels = {};
+  P("s.push('A')", 12, `Move ${C('head')} to ${C("'A'")}`);
+  // push B
+  P("s.push('B')", 9, `Call ${C('push')}`);
+  const b = m.node('B'); m.labels = { new_node: b };
+  P("s.push('B')", 10, `Create a node for ${C("'B'")}`);
+  m.nodes[b].next = m.head;
+  P("s.push('B')", 11, `Point it at ${C("'A'")}`);
+  m.head = b; m.labels = {};
+  P("s.push('B')", 12, `Move ${C('head')} to ${C("'B'")}`);
+  // push C
+  const c = m.node('C'); m.nodes[c].next = m.head; m.head = c;
+  P("s.push('C')", 12, `Push ${C("'C'")} the same way`);
+  // peek
+  P('s.peek()', 22, `Call ${C('peek')}`);
+  P('s.peek()', 23, `${C('head')} is not ${C('None')}, continue`);
+  m.hl = c; P("s.peek()  → 'C'", 26, `Return ${C("'C'")}`); m.hl = null;
+  // pop C
+  P('s.pop()', 14, `Call ${C('pop')}`);
+  P('s.pop()', 15, `${C('head')} is not ${C('None')}, continue`);
+  P('s.pop()', 18, `Save ${C("value = 'C'")}`);
+  m.head = b; m.faded = [c];
+  P('s.pop()', 19, `Move ${C('head')} to ${C("'B'")}`);
+  delete m.nodes[c]; m.faded = [];
+  P("s.pop()  → 'C'", 20, `Return ${C("'C'")}, the old node is freed`);
+  // pop B, A
+  m.head = a; delete m.nodes[b];
+  P("s.pop()  → 'B'", 20, `Pop again: ${C("'B'")}`);
+  m.head = null; delete m.nodes[a];
+  P("s.pop()  → 'A'", 20, `Pop again: ${C("'A'")}, now empty`);
+  // pop empty
+  P('s.pop()', 14, `Call ${C('pop')} on the empty stack`);
+  P('s.pop()', 15, `${C('head')} is ${C('None')}, so the ${C('if')} is True`);
+  P('s.pop()', 16, `Print ${C('Stack is empty')}`);
+  P('s.pop()  → None', 17, `Return ${C('None')}`);
+  new Deck(sl, S, s => view.set(s.st), code);
+};
+
+/* 16: head and tail */
+SETUP.deckHeadTail = sl => {
+  const view = new LinkedView($(sl, '.view'), { tail: true });
+  const m = new LM(); m.build(['A', 'B', 'C']);
+  const [a, b, c] = ['A', 'B', 'C'].map(v => m.find(v));
+  const S = [];
+  const P = cap => S.push({ cap, st: m.snap() });
+  P(`${C('head')} is the front, ${C('tail')} is the back`);
+  const d = m.node('D'); m.labels = { new_node: d };
+  P(`${C("enqueue('D')")}: create a node`);
+  m.nodes[c].next = d; P('Link C to D');
+  m.tail = d; m.labels = {}; P(`Move ${C('tail')} to D`);
+  m.head = b; m.faded = [a]; P(`${C('dequeue()')}: move ${C('head')} to B`);
+  delete m.nodes[a]; m.faded = []; P('Return A, both are O(1)');
+  P('Removing the tail needs the node before it');
+  m.labels = { current: b }; P('Start at the head');
+  m.labels = { current: c }; P(`Walk to C, the node before the tail`);
+  m.labels = {}; P('That walk is O(n), so we remove from the head');
+  new Deck(sl, S, s => view.set(s.st));
+};
+
+/* 17: empty cases */
+SETUP.deckEmptyCases = sl => {
+  const view = new LinkedView($(sl, '.view'), { tail: true });
+  const m = new LM();
+  const S = [];
+  const P = cap => S.push({ cap, st: m.snap() });
+  P(`Case 1: enqueue into an empty queue`);
+  let a = m.node('A'); m.labels = { new_node: a };
+  P('Create a node for A');
+  m.head = a; P(`${C('head')} points to A`);
+  m.tail = a; m.labels = {}; P(`${C('tail')} points to A too`);
+  P('Case 2: dequeue the last item');
+  m.head = null; m.faded = [a]; P(`${C('head')} moves to ${C('None')}`);
+  P(`${C('tail')} still points to A`);
+  m.tail = null; delete m.nodes[a]; m.faded = [];
+  P(`Set ${C('tail')} to ${C('None')}, the queue is empty`);
+  m.build(['A']); a = m.head;
+  P('Case 3: forgetting to reset tail');
+  m.head = null; P(`${C('head')} moves to ${C('None')}, ${C('tail')} stays on A`);
+  const b = m.node('B'); m.labels = { new_node: b };
+  P(`${C("enqueue('B')")} creates a node`);
+  m.nodes[a].next = b; P(`${C('tail')} is not ${C('None')}, so A links to B`);
+  m.tail = b; m.labels = {};
+  P(`${C('head')} is ${C('None')}, so B is lost`);
+  new Deck(sl, S, s => view.set(s.st));
+};
+
+/* 18: linked queue code walkthrough */
+SETUP.codeLinkedQueue = sl => {
+  const code = $(sl, 'pre.code'); renderCode(code, src('src-linkedqueue'));
+  const view = new LinkedView($(sl, '.view'), { tail: true });
+  const m = new LM();
+  const S = [];
+  const P = (call, line, cap) => S.push({ call, line, cap, st: m.snap() });
+  P('q = LinkedQueue()', 3, `${C('head')} and ${C('tail')} start as ${C('None')}`);
+  // enqueue A
+  P("q.enqueue('A')", 5, `Call ${C('enqueue')}`);
+  const a = m.node('A'); m.labels = { new_node: a };
+  P("q.enqueue('A')", 6, `Create a node for ${C("'A'")}`);
+  P("q.enqueue('A')", 7, `${C('tail')} is ${C('None')}, the queue is empty`);
+  m.head = a; P("q.enqueue('A')", 8, `${C('head')} points to ${C("'A'")}`);
+  m.tail = a; m.labels = {};
+  P("q.enqueue('A')", 9, `${C('tail')} points to ${C("'A'")}`);
+  // enqueue B
+  P("q.enqueue('B')", 5, `Call ${C('enqueue')}`);
+  const b = m.node('B'); m.labels = { new_node: b };
+  P("q.enqueue('B')", 6, `Create a node for ${C("'B'")}`);
+  P("q.enqueue('B')", 7, `${C('tail')} is not ${C('None')}, take the ${C('else')} branch`);
+  m.nodes[a].next = b; P("q.enqueue('B')", 11, `Link ${C("'A'")} to ${C("'B'")}`);
+  m.tail = b; m.labels = {};
+  P("q.enqueue('B')", 12, `Move ${C('tail')} to ${C("'B'")}`);
+  // enqueue C
+  const c = m.node('C'); m.nodes[b].next = c; m.tail = c;
+  P("q.enqueue('C')", 12, `Enqueue ${C("'C'")} the same way`);
+  // peek
+  P('q.peek()', 24, `Call ${C('peek')}`);
+  P('q.peek()', 25, `${C('head')} is not ${C('None')}, continue`);
+  m.hl = a; P("q.peek()  → 'A'", 28, `Return ${C("'A'")}`); m.hl = null;
+  // dequeue A
+  P('q.dequeue()', 14, `Call ${C('dequeue')}`);
+  P('q.dequeue()', 15, `${C('head')} is not ${C('None')}, continue`);
+  P('q.dequeue()', 18, `Save ${C("value = 'A'")}`);
+  m.head = b; m.faded = [a]; P('q.dequeue()', 19, `Move ${C('head')} to ${C("'B'")}`);
+  P('q.dequeue()', 20, `${C('head')} is not ${C('None')}, ${C('tail')} stays`);
+  delete m.nodes[a]; m.faded = [];
+  P("q.dequeue()  → 'A'", 22, `Return ${C("'A'")}, the old node is freed`);
+  // dequeue B
+  m.head = c; delete m.nodes[b];
+  P("q.dequeue()  → 'B'", 22, `Dequeue again: ${C("'B'")}`);
+  // dequeue C (last item)
+  P('q.dequeue()', 14, `Call ${C('dequeue')} with one item left`);
+  P('q.dequeue()', 18, `Save ${C("value = 'C'")}`);
+  m.head = null; m.faded = [c];
+  P('q.dequeue()', 19, `${C('head')} moves to ${C('None')}, ${C('tail')} still on ${C("'C'")}`);
+  P('q.dequeue()', 20, `${C('head')} is ${C('None')}, the queue is empty`);
+  m.tail = null; P('q.dequeue()', 21, `Set ${C('tail')} to ${C('None')}`);
+  delete m.nodes[c]; m.faded = [];
+  P("q.dequeue()  → 'C'", 22, `Return ${C("'C'")}`);
+  // dequeue empty
+  P('q.dequeue()', 14, `Call ${C('dequeue')} on the empty queue`);
+  P('q.dequeue()', 15, `${C('head')} is ${C('None')}, so the ${C('if')} is True`);
+  P('q.dequeue()', 16, `Print ${C('Queue is empty')}`);
+  P('q.dequeue()  → None', 17, `Return ${C('None')}`);
+  new Deck(sl, S, s => view.set(s.st), code);
+};
+
+/* 8: list growing */
+SETUP.resizeDemo = sl => {
+  const box = $(sl, '.rz'), cap = $(sl, '.cap'), btn = $(sl, '[data-act="append"]');
+  let vals, size, busy;
+  const row = (v, c, label) => `<p class="small" style="margin:10px 0 0">${label}</p><div class="slots">` +
+    Array.from({ length: c }, (_, i) => `<div class="slot ${i < v.length ? 'full' : ''}">${i < v.length ? v[i] : ''}</div>`).join('') + '</div>';
+  const draw = () => { box.innerHTML = row(vals, size, `List memory: ${size} slots`); };
+  const reset = () => { vals = []; size = 2; busy = false; draw(); cap.innerHTML = 'Click append'; btn.textContent = 'append'; };
+  reset();
+  btn.addEventListener('click', () => {
+    if (busy) return;
+    if (vals.length >= 16) { reset(); return; }
+    const v = letter(vals.length);
+    if (vals.length < size) {
+      vals.push(v); draw();
+      cap.innerHTML = `${C(`append('${v}')`)}: free slot, nothing copied`;
+    } else {
+      busy = true;
+      const big = size * 2;
+      let copied = 0;
+      cap.innerHTML = `Full, copying to a block of ${big} slots`;
+      box.innerHTML = row(vals, size, 'Old block') + row([], big, 'New block');
+      const step = () => {
+        if (copied < vals.length) {
+          copied++;
+          box.innerHTML = row(vals, size, 'Old block') + row(vals.slice(0, copied), big, 'New block');
+          setTimeout(step, 260);
+        } else {
+          size = big; vals.push(v); draw(); busy = false;
+          cap.innerHTML = `${C(`append('${v}')`)}: copied ${copied} items, O(n)`;
+          if (vals.length >= 16) btn.textContent = 'start over';
+        }
+      };
+      setTimeout(step, 700);
+    }
+    if (vals.length >= 16) btn.textContent = 'start over';
+  });
+};
+
+/* 9: memory */
+SETUP.memoryDemo = sl => {
+  const r = $(sl, 'input[type=range]'), mn = $(sl, '.mn');
+  const ml = $(sl, '.mlist'), mlc = $(sl, '.mlistc'), mnd = $(sl, '.mnodes'), mnc = $(sl, '.mnodec');
+  const draw = () => {
+    const n = +r.value;
+    mn.textContent = n;
+    const size = n === 0 ? 0 : Math.max(4, 2 ** Math.ceil(Math.log2(n)));
+    ml.innerHTML = '<div class="slots">' + Array.from({ length: size }, (_, i) => `<div class="slot ${i < n ? 'full' : ''}">${i < n ? letter(i) : ''}</div>`).join('') + '</div>';
+    mlc.textContent = n ? `${n} slots in use, ${size - n} spare` : 'No slots in use';
+    let h = '';
+    for (let i = 0; i < n; i++) h += `<div class="mnode"><span>${letter(i)}</span><span>•</span></div><span>→</span>`;
+    mnd.innerHTML = h + '<span>None</span>';
+    mnc.textContent = n ? `${n} nodes, each holding an item and a next pointer` : 'No nodes';
+  };
+  r.addEventListener('input', draw);
+  draw();
+};
+
+/* ================= navigation ================= */
+const slides = [...document.querySelectorAll('.slide')];
+slides.forEach(sl => { const f = SETUP[sl.dataset.setup]; if (f) f(sl); });
+let cur = 0;
+const counter = document.getElementById('counter');
+function go(n) {
+  cur = Math.max(0, Math.min(slides.length - 1, n));
+  slides.forEach((s, i) => s.classList.toggle('active', i === cur));
+  counter.textContent = `${cur + 1} / ${slides.length}`;
+  history.replaceState(null, '', '#' + (cur + 1));
+}
+document.getElementById('prev').onclick = () => go(cur - 1);
+document.getElementById('nextSlide').onclick = () => go(cur + 1);
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.key === 'ArrowRight' || e.key === 'PageDown') go(cur + 1);
+  if (e.key === 'ArrowLeft' || e.key === 'PageUp') go(cur - 1);
+});
+go((parseInt(location.hash.slice(1)) || 1) - 1);
+</script>
+</body>
+</html>
