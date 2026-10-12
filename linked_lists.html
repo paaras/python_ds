@@ -109,7 +109,8 @@ textarea.ed{width:100%; box-sizing:border-box; font-family:var(--mono); font-siz
 /* nav */
 .nav{border-top:1px solid var(--line); display:flex; align-items:center; gap:.6rem; padding:.45rem 16px calc(.45rem + env(safe-area-inset-bottom, 0px))}
 .nav .cnt{font-variant-numeric:tabular-nums; font-size:.95rem; min-width:4.5em; text-align:center}
-.nav .ttl{flex:1; text-align:right; font-size:.85rem; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.nav button{font-size:1.15rem; line-height:1; padding:.3em .8em}
+.nav .ttl{flex:1; text-align:left; font-size:.85rem; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .chart text{font:13px var(--sans); fill:var(--muted)}
 .chart .ax{stroke:var(--line)}
 .chart .ln0{stroke:#c8c8c8; stroke-width:2; fill:none}
@@ -124,6 +125,18 @@ textarea.ed{width:100%; box-sizing:border-box; font-family:var(--mono); font-siz
 .stat{display:grid; grid-template-columns:max-content max-content; gap:.3rem 1.5rem; font-size:1.15rem}
 .stat b{font-variant-numeric:tabular-nums}
 @media (prefers-reduced-motion: reduce){*{scroll-behavior:auto}}
+/* playground */
+.pgcols{grid-template-columns:minmax(0,1fr) minmax(0,1.05fr)}
+#pgEd{height:62vh}
+@media (max-width:860px){
+  .pgcols{grid-template-columns:minmax(0,1fr)}
+  #pgEd{height:42vh; font-size:.82rem}
+}
+@media (max-width:600px){
+  .nav{justify-content:space-between}
+  .nav .ttl{display:none}
+  .nav button{font-size:22px; padding:4px 22px; min-height:40px}
+}
 </style>
 </head>
 <body>
@@ -399,9 +412,9 @@ textarea.ed{width:100%; box-sizing:border-box; font-family:var(--mono); font-siz
 <section class="slide" data-title="Playground">
   <h1>Playground</h1>
   <p>Edit any method, then call it with the buttons. The diagram shows the list after each call.</p>
-  <div class="cols" style="grid-template-columns:minmax(0,1fr) minmax(0,1.05fr)">
+  <div class="cols pgcols">
     <div style="display:flex;flex-direction:column;gap:.5rem">
-      <textarea class="ed" id="pgEd" spellcheck="false" style="height:62vh" aria-label="LinkedList code"></textarea>
+      <textarea class="ed" id="pgEd" spellcheck="false" aria-label="LinkedList code"></textarea>
       <div class="row"><button id="pgResetCode">Reset code</button></div>
     </div>
     <div style="display:flex;flex-direction:column;gap:.8rem">
@@ -416,11 +429,10 @@ textarea.ed{width:100%; box-sizing:border-box; font-family:var(--mono); font-siz
 
 </main>
 <nav class="nav" aria-label="Slides">
-  <button id="prev" aria-label="Previous slide">&larr;</button>
-  <span class="cnt" id="cnt">1 / 21</span>
-  <button id="next" aria-label="Next slide">&rarr;</button>
-  <button id="fs">Fullscreen</button>
   <span class="ttl" id="ttl"></span>
+  <button id="prev" aria-label="Previous slide">&lsaquo;</button>
+  <span class="cnt" id="cnt">1 / 21</span>
+  <button id="next" aria-label="Next slide">&rsaquo;</button>
 </nav>
 </div>
 
@@ -1704,12 +1716,6 @@ function goSlide(i){
 }
 $('prev').onclick = () => goSlide(cur - 1);
 $('next').onclick = () => goSlide(cur + 1);
-$('fs').onclick = () => {
-  try {
-    if (document.fullscreenElement) document.exitFullscreen();
-    else { const p = document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); if (p && p.catch) p.catch(() => {}); }
-  } catch (e) {}
-};
 document.addEventListener('keydown', e => {
   if (e.target.closest('input, textarea, select')) return;
   if (e.key === 'ArrowRight' || e.key === 'PageDown') { e.preventDefault(); goSlide(cur + 1); }
