@@ -1,0 +1,1898 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Binary Search Trees</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#ffffff; --ink:#16181d; --muted:#626a76; --line:#e3e5ea; --soft:#f5f6f8;
+  --hi:#1556d6; --hi-soft:#e7eefc; --am:#c2610c; --am-soft:#fdf0e2;
+  --err:#b3261e; --err-soft:#fbe9e7; --ok:#1e7f43; --ok-soft:#e5f4ea;
+  --sans:"Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html{font-size:clamp(15px, 0.85vw + 6px, 21px); height:100%}
+@media (max-height:820px) and (min-width:861px){html{font-size:clamp(14px, 0.7vw + 5px, 17px)}}
+body{background:var(--bg); color:var(--ink); font-family:var(--sans); height:100%; margin:0; -webkit-font-smoothing:antialiased}
+.deck{height:100%; display:flex; flex-direction:column}
+.stage{flex:1; overflow-y:auto; overflow-x:hidden; padding-inline:16px}
+.slide{display:none; max-width:1200px; margin:0 auto; padding-block:1.4rem 1.4rem}
+.slide.on{display:flex; flex-direction:column; gap:1.05rem; animation:fadein .35s ease}
+@keyframes fadein{from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none}}
+h1{font-size:2rem; line-height:1.15; margin:0; font-weight:800; letter-spacing:-.02em; text-wrap:balance}
+h1.big{font-size:3.4rem}
+.kicker{font-size:.8rem; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--hi); margin-bottom:-.9rem}
+p{margin:0; font-size:1.1rem; line-height:1.5; max-width:66ch}
+p.lead{font-size:1.3rem; color:#2c313a}
+ul.pts{margin:0; padding-left:1.15em; font-size:1.1rem; line-height:1.5; max-width:66ch; display:flex; flex-direction:column; gap:.25rem}
+ul.pts li::marker{color:var(--hi)}
+code{font-family:var(--mono); font-size:.86em; background:var(--soft); padding:.08em .35em; border-radius:4px; border:1px solid var(--line)}
+b.blue{color:var(--hi)} b.am{color:var(--am)} b.red{color:var(--err)} b.green{color:var(--ok)}
+.mut{color:var(--muted)} .small{font-size:.95rem}
+.cols{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:1.6rem 3rem; align-items:start}
+.cols > *{min-width:0}
+.stack{display:flex; flex-direction:column; gap:1rem; min-width:0}
+@media (max-width:860px){.cols{grid-template-columns:minmax(0,1fr)}}
+.lbl{font-size:.76rem; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:700; margin-bottom:.35rem}
+.card{border:1px solid var(--line); border-radius:12px; padding:1.1rem 1.25rem; background:var(--bg)}
+.card.soft{background:var(--soft); border-color:transparent}
+.big-num{font-size:2.6rem; font-weight:800; letter-spacing:-.02em; font-variant-numeric:tabular-nums; line-height:1.1}
+
+/* code */
+pre.code{font-family:var(--mono); font-size:.84rem; line-height:1.6; background:var(--soft); border:1px solid var(--line); border-radius:10px; padding:.8rem 0; margin:0; overflow-x:auto}
+pre.code .ln{display:block; padding:0 1.1rem 0 .9rem; white-space:pre; border-left:4px solid transparent; transition:background .2s}
+pre.code .ln.on{background:var(--hi-soft); border-left-color:var(--hi)}
+pre.code .ln .no{display:inline-block; width:1.7em; color:#b0b5bd; user-select:none}
+pre.code .kw{font-weight:700; color:#1d2b6b}
+pre.code .cm{color:var(--muted); font-style:italic}
+pre.code .st{color:#8a4b00}
+
+/* controls */
+*, *::before, *::after{touch-action:manipulation}
+button, .nav, .chip, svg.tree{-webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent}
+button{font:inherit; font-size:.92rem; font-weight:600; border:1.5px solid var(--ink); background:var(--bg); color:var(--ink); border-radius:8px; padding:.42em .95em; cursor:pointer; transition:background .15s, color .15s, transform .1s}
+button:hover:not(:disabled){background:var(--soft)}
+button:active:not(:disabled){transform:translateY(1px)}
+button.pri{background:var(--ink); color:#fff}
+button.pri:hover:not(:disabled){background:#333842}
+button.sel{background:var(--ink); color:#fff}
+button.sel:hover:not(:disabled){background:#333842}
+button:disabled{opacity:.35; cursor:default}
+button:focus-visible, input:focus-visible, textarea:focus-visible{outline:3px solid var(--hi); outline-offset:2px}
+.row{display:flex; flex-wrap:wrap; align-items:center; gap:.55rem}
+input[type=number]{font:inherit; font-size:.95rem; width:5em; padding:.38em .5em; border:1.5px solid var(--ink); border-radius:8px}
+input[type=range]{accent-color:var(--hi); width:min(22rem,100%)}
+
+/* tree svg */
+svg.tree{display:block; max-width:100%; height:auto; overflow:visible}
+.dia{overflow-x:auto; overflow-y:hidden; padding:4px 0}
+.nd circle.c{fill:#fff; stroke:var(--ink); stroke-width:2.2}
+.nd text.v{font:700 17px var(--sans); fill:var(--ink); dominant-baseline:central; text-anchor:middle}
+.nd circle.ring{fill:none; stroke:var(--hi); stroke-width:3; opacity:0}
+.nd.cur circle.ring{opacity:1}
+.nd.path circle.c{fill:var(--hi-soft); stroke:var(--hi)}
+.nd.wait circle.c{fill:var(--hi-soft); stroke:var(--hi); stroke-dasharray:4 3}
+.nd.found circle.c, .nd.done circle.c{fill:var(--hi); stroke:var(--hi)}
+.nd.found text.v, .nd.done text.v{fill:#fff}
+.nd.L circle.c{fill:var(--hi-soft); stroke:var(--hi)}
+.nd.R circle.c{fill:var(--am-soft); stroke:var(--am)}
+.nd.am circle.c{fill:var(--am); stroke:var(--am)} .nd.am text.v{fill:#fff}
+.nd.bad circle.c{fill:var(--err-soft); stroke:var(--err); stroke-width:3}
+.nd.bad text.v{fill:var(--err)}
+.nd.ok circle.c{fill:var(--ok); stroke:var(--ok)} .nd.ok text.v{fill:#fff}
+.nd.dim > *{opacity:.22}
+.nd.clk{cursor:pointer}
+.nd.clk:hover circle.c{stroke-width:3.5}
+.eg{stroke:#9aa1ab; stroke-width:2.2}
+.eg.p{stroke:var(--hi); stroke-width:3.2}
+.eg.slot{stroke-dasharray:5 4}
+.slotc{fill:none; stroke:#9aa1ab; stroke-width:2; stroke-dasharray:5 4}
+.slott{font:500 11px var(--mono); fill:var(--muted); text-anchor:middle; dominant-baseline:central}
+.tag{font:700 13px var(--mono); fill:var(--hi); paint-order:stroke; stroke:#fff; stroke-width:5px; stroke-linejoin:round}
+.tag.rt{fill:var(--muted); font-weight:600}
+.tag.am{fill:var(--am)}
+.side{font:600 12px var(--sans); fill:var(--muted); text-anchor:middle; paint-order:stroke; stroke:#fff; stroke-width:4px}
+
+/* step player */
+.pl{display:grid; grid-template-columns:minmax(0,max-content) minmax(0,1fr); gap:1.2rem 2.2rem; align-items:start}
+@media (max-width:900px){.pl{grid-template-columns:minmax(0,1fr)}}
+.pl-side{display:flex; flex-direction:column; gap:.8rem; min-width:0}
+.pl-ctl{display:flex; flex-wrap:wrap; gap:.45rem; align-items:center}
+.pl-count{font-size:.85rem; color:var(--muted); font-variant-numeric:tabular-nums; margin-left:.3rem}
+.pl-note{font-size:1.15rem; line-height:1.4; min-height:2.8em; font-weight:500; margin:0}
+.pl-cmp{font-family:var(--mono); font-size:1.05rem; color:var(--hi); font-weight:700}
+.pl-cmp:empty{display:none}
+.pl-main{display:flex; flex-wrap:wrap; gap:1rem 2rem; align-items:flex-start}
+.pl-main > .dia{flex:0 1 auto; min-width:0; max-width:100%}
+.pl-bot{display:flex; flex-direction:column; gap:1rem; flex:1 1 10rem; min-width:10rem}
+pre.code.long{font-size:.7rem; line-height:1.36}
+.outbox{font-family:var(--mono); font-size:.92rem; margin:0; padding:.55rem .8rem; border:1px solid var(--line); border-radius:8px; min-height:2.4em; white-space:pre-wrap; background:#fff}
+.outbox .new{color:var(--hi); font-weight:700}
+.cstack{display:flex; flex-direction:column; gap:3px; font-family:var(--mono); font-size:.82rem}
+.cstack div{border:1px solid var(--line); border-radius:6px; padding:.15rem .5rem; background:#fff; color:var(--muted)}
+.cstack div:first-child{border-color:var(--hi); background:var(--hi-soft); color:var(--ink); font-weight:700}
+.scen{display:flex; flex-wrap:wrap; gap:.45rem}
+
+/* chips (lists) */
+.chips{display:flex; flex-wrap:wrap; gap:.35rem; align-items:center}
+.chip{min-width:2.35rem; height:2.35rem; display:inline-flex; align-items:center; justify-content:center; border:2px solid var(--ink); border-radius:8px; font-weight:700; font-variant-numeric:tabular-nums; background:#fff; transition:all .25s; padding:0 .3rem; position:relative}
+.chip.cur{border-color:var(--hi); background:var(--hi); color:#fff; transform:translateY(-3px)}
+.chip.seen{background:var(--hi-soft); border-color:var(--hi); color:var(--hi)}
+.chip.dim{opacity:.22}
+.chip.ok{background:var(--ok); border-color:var(--ok); color:#fff}
+.chip.am{background:var(--am-soft); border-color:var(--am); color:var(--am)}
+.chip.bad{background:var(--err-soft); border-color:var(--err); color:var(--err)}
+.chip .mk{position:absolute; bottom:calc(100% + 4px); left:50%; transform:translateX(-50%); font:700 .7rem/1.25 var(--mono); color:var(--hi); white-space:nowrap; display:flex; flex-direction:column; align-items:center}
+.arr{color:#9aa1ab; font-weight:700}
+.chips.ll{gap:.2rem}
+
+/* tables */
+.tw{overflow-x:auto}
+table.t{border-collapse:collapse; font-size:1.05rem}
+table.t th, table.t td{border-bottom:1px solid var(--line); padding:.6rem 1rem; text-align:left; vertical-align:top}
+table.t th{font-size:.76rem; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:700}
+table.t td:last-child{min-width:14rem}
+#bsChips{flex-wrap:nowrap; overflow-x:auto; padding-top:2.7rem; margin-top:0 !important}
+table.t td.o{font-family:var(--mono); font-weight:700; white-space:nowrap}
+table.t td.o.g{color:var(--hi)} table.t td.o.b{color:var(--err)}
+
+/* misc */
+.howto{display:grid; grid-template-columns:max-content minmax(0,1fr); gap:.8rem 1rem; align-items:center; font-size:1.1rem; max-width:62ch}
+.howto > div{display:contents}
+.key{display:inline-block; min-width:2.2em; text-align:center; border:1.5px solid var(--ink); border-radius:6px; padding:.12em .55em; font-size:1rem; font-weight:700}
+.key.pri{background:var(--ink); color:#fff}
+.msg{font-size:1.15rem; font-weight:600; min-height:1.6em}
+.msg.bad{color:var(--err)} .msg.good{color:var(--ok)}
+.trio{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:1rem}
+@media (max-width:860px){.trio{grid-template-columns:minmax(0,1fr)}}
+.trio .card h3{margin:0 0 .3rem; font-size:1.08rem}
+.trio .card p{font-size:1rem}
+.legend{display:flex; flex-wrap:wrap; gap:1rem; font-size:.95rem; color:var(--muted)}
+.legend span::before{content:""; display:inline-block; width:.9em; height:.9em; border-radius:50%; margin-right:.4em; vertical-align:-.1em; border:2px solid var(--ink)}
+.legend .l-L::before{background:var(--hi-soft); border-color:var(--hi)}
+.legend .l-R::before{background:var(--am-soft); border-color:var(--am)}
+.legend .l-am::before{background:var(--am); border-color:var(--am)}
+.legend .l-done::before{background:var(--hi); border-color:var(--hi)}
+.legend .l-wait::before{background:var(--hi-soft); border-color:var(--hi); border-style:dashed}
+.legend .l-cur::before{box-shadow:0 0 0 2px #fff, 0 0 0 4px var(--hi)}
+.pair{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:1.5rem 2.5rem}
+@media (max-width:860px){.pair{grid-template-columns:minmax(0,1fr)}}
+.stat{font-size:1.05rem}
+.stat b{font-variant-numeric:tabular-nums}
+.levels{display:flex; flex-direction:column; gap:3px; font-family:var(--mono); font-size:.82rem}
+.levels .lv{display:grid; grid-template-columns:5.5em minmax(0,1fr) 9em; align-items:center; gap:.6rem}
+.levels .bar{height:12px; background:var(--hi); border-radius:3px; min-width:3px; transition:width .3s}
+.memnode{display:inline-grid; grid-template-columns:repeat(3, auto); border:2px solid var(--ink); border-radius:8px; overflow:hidden; font-family:var(--mono); font-size:.95rem}
+.memnode span{padding:.45rem .8rem; border-right:2px solid var(--ink)}
+.memnode span:last-child{border-right:0}
+.memnode span.v{font-weight:700; background:var(--hi-soft)}
+
+/* editor */
+textarea.ed{width:100%; font-family:var(--mono); font-size:.8rem; line-height:1.5; border:1.5px solid var(--ink); border-radius:10px; padding:.7rem .9rem; white-space:pre; overflow:auto; resize:vertical; tab-size:4; background:#fff; color:var(--ink)}
+.pgcols{grid-template-columns:minmax(0,1fr) minmax(0,1.1fr)}
+#pgEd{height:56vh}
+@media (max-width:860px){.pgcols{grid-template-columns:minmax(0,1fr)} #pgEd{height:42vh}}
+.err{color:var(--err)}
+
+/* nav */
+.nav{border-top:1px solid var(--line); display:flex; align-items:center; gap:.6rem; padding:.45rem 16px calc(.45rem + env(safe-area-inset-bottom, 0px)); position:relative; background:#fff}
+.nav .prog{position:absolute; left:0; top:-1px; height:2px; background:var(--hi); transition:width .3s}
+.nav .cnt{font-variant-numeric:tabular-nums; font-size:.92rem; min-width:4.5em; text-align:center}
+.nav button{font-size:1.15rem; line-height:1; padding:.3em .85em}
+.nav .ttl{flex:1; font-size:.85rem; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+@media (max-width:600px){
+  svg.tree{max-width:none; width:max(min(100%, calc(var(--w) * 1px)), calc(var(--w) * .62px)) !important}
+  h1{font-size:1.75rem} h1.big{font-size:2.4rem}
+  .nav{justify-content:space-between} .nav .ttl{display:none}
+  .nav button{font-size:22px; padding:4px 22px; min-height:40px}
+}
+@media (prefers-reduced-motion: reduce){.slide.on{animation:none}}
+</style>
+</head>
+<body>
+<div class="deck">
+<main class="stage" id="stage">
+
+<!-- 1 -->
+<section class="slide" data-title="Start">
+  <h1 class="big">Binary Search Trees</h1>
+  <div class="dia"><svg class="tree" id="titleTree"></svg></div>
+  <div class="howto">
+    <div><span><span class="key">&larr;</span> <span class="key">&rarr;</span></span><span>Move between slides</span></div>
+    <div><span class="key pri">Step</span><span>Run the code one line at a time</span></div>
+    <div><span class="key">Play</span><span>Run the code on its own, press again to pause</span></div>
+  </div>
+</section>
+
+<!-- 2 -->
+<section class="slide" data-title="Tree nodes">
+  <h1>Tree nodes</h1>
+  <p>So far our nodes have had one pointer, <code>next</code>, so a linked list can only go in one direction. A tree node has two pointers, <code>left</code> and <code>right</code>. Each pointer can point to another node, or to <code>None</code> if there's nothing there.</p>
+  <div class="cols">
+    <div class="stack">
+      <div class="lbl">Linked list node</div>
+      <pre class="code" id="cNodeLL"></pre>
+    </div>
+    <div class="stack">
+      <div class="lbl">Tree node</div>
+      <pre class="code" id="cNodeT"></pre>
+    </div>
+  </div>
+  <div class="row"><button id="morphLL" class="sel">Linked list</button><button id="morphT">Tree</button></div>
+  <div class="dia"><svg class="tree" id="morphSvg"></svg></div>
+  <p id="morphCap"></p>
+</section>
+
+<!-- 3 -->
+<section class="slide" data-title="The rule">
+  <h1>Binary search tree rule</h1>
+  <p>A binary search tree keeps its nodes in order. Values smaller than a node go on its left and values bigger than it go on its right. This applies to every node, not only the node at the top, so each side is a smaller tree that follows the same rule. Click any node to check.</p>
+  <div class="dia"><svg class="tree" id="ruleSvg"></svg></div>
+  <p id="ruleCap"></p>
+</section>
+
+<!-- 4 -->
+<section class="slide" data-title="Search comparison">
+  <h1>Searching a linked list vs a tree</h1>
+  <p>To find a value in a linked list we have to check each node starting from the head. In a tree we compare the value with a node and we know which side it has to be on, so we never look at the other side. Both of these hold the same 15 values. Pick a value and press Start.</p>
+  <div class="row"><span class="mut">Find:</span><span class="scen" id="raceBtns"></span><button class="pri" id="raceGo">Start</button></div>
+  <div class="stack" style="gap:.5rem">
+    <div class="row" style="justify-content:space-between"><div class="lbl" style="margin:0">Linked list</div><div class="stat">checks: <b id="raceLLn">0</b></div></div>
+    <div class="chips ll" id="raceLL"></div>
+  </div>
+  <div class="stack" style="gap:.5rem">
+    <div class="row" style="justify-content:space-between"><div class="lbl" style="margin:0">Tree</div><div class="stat">checks: <b id="raceTn">0</b></div></div>
+    <div class="dia"><svg class="tree" id="raceSvg"></svg></div>
+  </div>
+  <p id="raceCap"></p>
+</section>
+
+<!-- 5 -->
+<section class="slide" data-title="Binary search">
+  <h1>Searching a tree is binary search</h1>
+  <p>Binary search checks the middle of a sorted list and throws away the half the target can't be in. In this tree each node is the middle of the values below it, so every time we go left or right we throw away half of the values, the same as binary search. Step through both and compare.</p>
+  <div class="row"><span class="mut">Find:</span><span class="scen" id="bsBtns"></span><button id="bsBack">Back</button><button class="pri" id="bsStep">Step</button></div>
+  <div class="cols">
+    <div class="stack">
+      <div class="lbl">Binary search on a sorted list</div>
+      <div class="chips" id="bsChips"></div>
+    </div>
+    <div class="stack">
+      <div class="lbl">The same values in a tree</div>
+      <div class="dia"><svg class="tree" id="bsSvg"></svg></div>
+    </div>
+  </div>
+  <p id="bsCap"></p>
+</section>
+
+<!-- 6 -->
+<section class="slide" data-title="Tree class">
+  <h1>The Tree class</h1>
+  <div class="cols">
+    <div class="stack">
+      <p>A LinkedList only needed to remember its head. A Tree only needs to remember the node at the top, called the <code>root</code>, because every other node can be reached from it by going left and right.</p>
+      <p>A new tree doesn't have any nodes yet, so <code>root</code> starts as <code>None</code>.</p>
+      <pre class="code" id="cTree"></pre>
+    </div>
+    <div class="stack">
+      <div class="row"><button id="tcEmpty" class="sel">Empty tree</button><button id="tcOne">After adding values</button></div>
+      <div class="dia"><svg class="tree" id="tcSvg"></svg></div>
+    </div>
+  </div>
+</section>
+
+<!-- 7 -->
+<section class="slide" data-title="Add: try it">
+  <h1>Adding a value</h1>
+  <p>To add a value we start at the root and compare. If the new value is smaller we go left, and if it's bigger we go right. We keep doing that until we reach an empty spot, and the new node goes there. Try it with the buttons.</p>
+  <div class="row">
+    <span>Adding: <b id="gVal" style="font-size:1.5rem; color:var(--hi)"></b></span>
+    <button class="pri" id="gLeft">&larr; Left</button><button class="pri" id="gRight">Right &rarr;</button>
+    <button id="gReset">Start over</button>
+  </div>
+  <div class="dia"><svg class="tree" id="gSvg"></svg></div>
+  <p id="gMsg"></p>
+</section>
+
+<!-- 8 -->
+<section class="slide" data-title="Add: code">
+  <h1>Adding a value: code</h1>
+  <p><code>current</code> starts at the root and moves down one level each time through the loop. Before it moves it checks if the next spot is <code>None</code>, because that's where the new node goes. An empty tree has nothing to compare with, so the new node becomes the root.</p>
+  <div class="scen" id="addSc"></div>
+  <div id="addPl"></div>
+</section>
+
+<!-- 9 -->
+<section class="slide" data-title="Find: code">
+  <h1>Finding a value</h1>
+  <p><code>find</code> goes down the tree the same way as add, but it prints each node it visits and stops when it finds the value. If <code>current</code> becomes <code>None</code> we've gone past the bottom of the tree, so the value isn't in it.</p>
+  <div class="scen" id="findSc"></div>
+  <div id="findPl"></div>
+</section>
+
+<!-- 10 -->
+<section class="slide" data-title="Print">
+  <h1>Printing every value</h1>
+  <p>To print every value we can't follow a single path, we have to visit every node. Each node does three things in order: print everything on its left, print itself, then print everything on its right. Its left side is a smaller tree, so it does the same three things, and so does the left side of that. This is recursion.</p>
+  <div class="row"><button id="piBack">Back</button><button class="pri" id="piStep">Step</button></div>
+  <div class="dia"><svg class="tree" id="piSvg"></svg></div>
+  <div class="stack" style="gap:.4rem"><div class="lbl" style="margin:0">Output</div><div class="chips" id="piOut" style="min-height:2.4rem"></div></div>
+  <p id="piCap"></p>
+</section>
+
+<!-- 11 -->
+<section class="slide" data-title="Print: code">
+  <h1>Printing every value: code</h1>
+  <p><code>print_from</code> does those three things for one node. It calls itself on <code>node.left</code>, prints <code>node.value</code>, then calls itself on <code>node.right</code>. The base case is when <code>node</code> is <code>None</code>, since there's nothing to print. Each call waits on the call stack until the call above it finishes, the same way factorial did.</p>
+  <div class="legend"><span class="l-cur">current call</span><span class="l-wait">waiting on the call stack</span><span class="l-done">printed</span></div>
+  <div id="printPl"></div>
+</section>
+
+<!-- 12 -->
+<section class="slide" data-title="Delete">
+  <h1>Deleting a value</h1>
+  <p>Deleting is harder than adding because the node we remove might have other nodes under it. We can't lose those nodes, so what we do depends on how many children the node has.</p>
+  <div class="trio">
+    <div class="card"><h3>No children</h3><p>Nothing is under it, so we can remove it.</p></div>
+    <div class="card"><h3>One child</h3><p>The child moves up into its place. Everything under the child comes with it.</p></div>
+    <div class="card"><h3>Two children</h3><p>Something has to take its place. The next slide explains which node.</p></div>
+  </div>
+  <div class="row"><span>Click any node to delete it.</span><button id="delReset">Reset tree</button></div>
+  <div class="dia"><svg class="tree" id="delSvg"></svg></div>
+  <p id="delCap"></p>
+</section>
+
+<!-- 13 -->
+<section class="slide" data-title="Two children">
+  <h1>Deleting a node with two children</h1>
+  <p>Whatever takes the node's place has to be bigger than everything on its left and smaller than everything on its right, or the tree breaks the rule. If we write the values in sorted order, the value right after the value we're deleting works. In the tree that's the smallest value on the right side, so we go right once and then keep going left until there's no left child.</p>
+  <p>We copy that value into the node we're deleting, then delete the old copy. The old copy can't have a left child, so deleting it is easy.</p>
+  <div class="row"><span class="mut">Delete:</span><span class="scen" id="wsBtns"></span></div>
+  <div class="dia"><svg class="tree" id="wsSvg"></svg></div>
+  <div class="stack" style="gap:.4rem"><div class="lbl" style="margin:0">Sorted order</div><div class="chips" id="wsChips"></div></div>
+  <p id="wsCap"></p>
+</section>
+
+<!-- 14 -->
+<section class="slide" data-title="delete_from returns">
+  <h1>What delete_from returns</h1>
+  <p>When we removed a node from a linked list we needed <code>prev</code> so we could change the node before it. In a tree we would need the parent and whether we came from its left or right. The recursive version gets around this. <code>delete_from</code> returns the node that should be in that spot after the delete, and the parent stores it:</p>
+  <pre class="code" id="cHand"></pre>
+  <div class="trio">
+    <div class="card soft"><h3>The value is further down</h3><p>Nothing changes at this node, so it returns the same node.</p><div class="dia"><svg class="tree" id="hb1"></svg></div></div>
+    <div class="card soft"><h3>The node has no children</h3><p>The spot should be empty now, so it returns <code>None</code>.</p><div class="dia"><svg class="tree" id="hb2"></svg></div></div>
+    <div class="card soft"><h3>The node has one child</h3><p>The child should be in the spot now, so it returns the child.</p><div class="dia"><svg class="tree" id="hb3"></svg></div></div>
+  </div>
+</section>
+
+<!-- 15 -->
+<section class="slide" data-title="Delete: code">
+  <h1>Deleting a value: code</h1>
+  <p>Each call compares the value with <code>node.value</code> and calls itself one level down on the left or right. When it finds the value it checks how many children the node has. On the way back up, each call stores what it got back and returns its own node.</p>
+  <div class="row" style="justify-content:space-between; gap:.6rem 1rem"><div class="scen" id="delSc"></div><div class="legend" style="font-size:.85rem"><span class="l-cur">current call</span><span class="l-wait">waiting on the call stack</span><span class="l-am">smallest on the right</span></div></div>
+  <div id="delPl"></div>
+</section>
+
+<!-- 16 -->
+<section class="slide" data-title="Insertion order">
+  <h1>Adding values in sorted order</h1>
+  <p>The shape of a tree depends on the order its values were added. If we add them in sorted order, every new value is bigger than everything already in the tree, so it always goes right. We end up with a tree shaped like a linked list, and searching it is as slow as searching a linked list.</p>
+  <div class="row"><button class="pri" id="omNext">Add next</button><button id="omAll">Add all</button><button id="omReset">Start over</button></div>
+  <div class="pair">
+    <div class="stack">
+      <div class="lbl">Mixed order</div>
+      <div class="chips" id="omChA"></div>
+      <div class="dia"><svg class="tree" id="omA"></svg></div>
+      <div class="stat">Height: <b id="omHA">0</b></div>
+    </div>
+    <div class="stack">
+      <div class="lbl">Sorted order</div>
+      <div class="chips" id="omChB"></div>
+      <div class="dia"><svg class="tree" id="omB"></svg></div>
+      <div class="stat">Height: <b id="omHB">0</b></div>
+    </div>
+  </div>
+</section>
+
+<!-- 17 -->
+<section class="slide" data-title="Height">
+  <h1>Height</h1>
+  <p>add, find and delete all follow one path from the root down, so the most checks they can make is the height of the tree. In a full tree each level has twice as many nodes as the level above it, so the number of nodes grows much faster than the height. Move the slider to see how many values a short tree can hold.</p>
+  <div class="row"><label for="lvR">Levels</label><input type="range" id="lvR" min="1" max="30" value="4"><b id="lvN" style="font-size:1.4rem"></b></div>
+  <div class="cols">
+    <div class="stack">
+      <div class="dia" id="lvDiaWrap"><svg class="tree" id="lvSvg"></svg></div>
+      <div class="levels" id="lvList"></div>
+    </div>
+    <div class="stack">
+      <div class="card"><div class="lbl">Nodes in a full tree</div><div class="big-num" id="lvNodes"></div></div>
+      <div class="card"><div class="lbl">Most checks to find a value in the tree</div><div class="big-num" style="color:var(--hi)" id="lvSteps"></div></div>
+      <div class="card"><div class="lbl">Most checks to find a value in a linked list</div><div class="big-num" id="lvLL"></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 18 -->
+<section class="slide" data-title="Time complexity">
+  <h1>Time complexity</h1>
+  <p><code>n</code> is the number of values in the tree. A balanced tree has about log n levels because each level doubles the number of nodes, the same way binary search halves the list. A lopsided tree can have n levels if every node is on the same side.</p>
+  <div class="tw"><table class="t">
+    <thead><tr><th>Method</th><th>Balanced</th><th>Lopsided</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td><code>add</code></td><td class="o">O(log n)</td><td class="o">O(n)</td><td>Follows one path down to an empty spot</td></tr>
+      <tr><td><code>find</code></td><td class="o">O(log n)</td><td class="o">O(n)</td><td>Follows one path down until it finds the value or reaches None</td></tr>
+      <tr><td><code>delete</code></td><td class="o">O(log n)</td><td class="o">O(n)</td><td>Follows one path down to the value, and maybe further down to the smallest value on its right</td></tr>
+      <tr><td><code>print</code></td><td class="o">O(n)</td><td class="o">O(n)</td><td>Has to visit every node once, whatever shape the tree is</td></tr>
+    </tbody>
+  </table></div>
+  <p>Finding a value in a linked list is always O(n), so a tree is only faster when it stays balanced.</p>
+</section>
+
+<!-- 19 -->
+<section class="slide" data-title="Space complexity">
+  <h1>Space complexity</h1>
+  <p>The tree takes O(n) space because there's one node for every value, and each node stores its value and two pointers. <code>add</code> and <code>find</code> use a loop with one <code>current</code> variable, so they only need O(1) extra space.</p>
+  <p><code>print</code> and <code>delete</code> use recursion, and every unfinished call takes up space on the call stack. The stack gets as deep as the tree is tall, so it's O(log n) for a balanced tree and O(n) for a lopsided tree.</p>
+  <div class="row"><button id="spBal" class="sel">Balanced tree</button><button id="spLop">Lopsided tree</button></div>
+  <div class="pair">
+    <div class="dia"><svg class="tree" id="spSvg"></svg></div>
+    <div class="stack" style="gap:.4rem"><div class="lbl" style="margin:0">Call stack at the deepest point of print</div><div class="cstack" id="spStack"></div></div>
+  </div>
+</section>
+
+<!-- 20 -->
+<section class="slide" data-title="Rebuild">
+  <h1>Balancing by rebuilding</h1>
+  <p>One way to fix a lopsided tree is to rebuild it. First we collect the values in sorted order, using the same order as print. Then the middle value becomes the root, the values before it build the left side, and the values after it build the right side. Each side picks its own middle the same way, so the tree ends up as short as it can be.</p>
+  <div id="rbPl"></div>
+</section>
+
+<!-- 21 -->
+<section class="slide" data-title="Rotation">
+  <h1>Balancing with rotations</h1>
+  <p>Rebuilding takes O(n) because it visits every node, so we don't want to do it after every add. Instead we can fix only the part of the tree that got lopsided with a rotation. The middle node moves up and the node above it moves down to the side. The values are still in order afterwards, so the tree still follows the rule.</p>
+  <div class="row"><button id="rotA" class="sel">Example 1</button><button id="rotB">Example 2</button><span style="width:1rem"></span><button class="pri" id="rotGo">Rotate</button></div>
+  <div class="dia"><svg class="tree" id="rotSvg"></svg></div>
+  <p id="rotCap"></p>
+</section>
+
+<!-- 22 -->
+<section class="slide" data-title="Self-balancing">
+  <h1>Self-balancing trees</h1>
+  <p>A self-balancing tree does a rotation as soon as part of it gets lopsided. After every add it goes back up the path it took and checks each node. If a node's left or right side is 2 or more levels taller than the other side, it rotates there. This kind of tree is called an AVL tree. Both trees below get the same values in sorted order, which is the worst case for a regular tree.</p>
+  <div class="row"><button class="pri" id="avNext">Add next</button><button id="avPlay">Play</button><button id="avReset">Start over</button><span class="chips" id="avChips"></span></div>
+  <div class="pair">
+    <div class="stack">
+      <div class="lbl">Regular tree</div>
+      <div class="dia"><svg class="tree" id="avA"></svg></div>
+      <div class="stat">Height: <b id="avHA">0</b></div>
+    </div>
+    <div class="stack">
+      <div class="lbl">AVL tree</div>
+      <div class="dia"><svg class="tree" id="avB"></svg></div>
+      <div class="stat">Height: <b id="avHB">0</b></div>
+    </div>
+  </div>
+  <p id="avCap"></p>
+</section>
+
+<!-- 23 -->
+<section class="slide" data-title="Summary">
+  <h1>Summary</h1>
+  <div class="cols">
+    <ul class="pts">
+      <li>A tree node has two pointers, <code>left</code> and <code>right</code>, and the Tree class only remembers the <code>root</code></li>
+      <li>Smaller values go on the left of a node and bigger values go on the right, at every node</li>
+      <li><code>add</code> and <code>find</code> follow one path down from the root, going left or right at each node</li>
+      <li><code>print</code> prints the left side, then the node, then the right side, so the values come out sorted</li>
+      <li><code>delete</code> depends on how many children the node has. With two children we copy in the smallest value from the right side.</li>
+      <li>The height decides how fast the tree is, so we keep it balanced by rebuilding it or with rotations</li>
+    </ul>
+    <div class="tw"><table class="t">
+      <thead><tr><th></th><th>Linked list</th><th>Balanced tree</th></tr></thead>
+      <tbody>
+        <tr><td>add</td><td class="o">O(1) at the head</td><td class="o">O(log n)</td></tr>
+        <tr><td>find</td><td class="o">O(n)</td><td class="o">O(log n)</td></tr>
+        <tr><td>delete</td><td class="o">O(n)</td><td class="o">O(log n)</td></tr>
+        <tr><td>print in sorted order</td><td class="o">needs sorting</td><td class="o">O(n)</td></tr>
+        <tr><td>space</td><td class="o">O(n)</td><td class="o">O(n)</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<!-- 24 -->
+<section class="slide" data-title="Playground">
+  <h1>Playground</h1>
+  <p>This is the full Tree class from these slides. Change anything you want and use the buttons to call the methods. The tree is drawn again after each call so you can see what your code did.</p>
+  <div class="cols pgcols">
+    <div class="stack" style="gap:.5rem">
+      <textarea class="ed" id="pgEd" spellcheck="false" aria-label="Tree code"></textarea>
+      <div class="row"><button id="pgResetCode">Reset code</button></div>
+    </div>
+    <div class="stack">
+      <div class="row"><label for="pgV">Value</label><input type="number" id="pgV" value="5"></div>
+      <div class="row" id="pgBtns"></div>
+      <div class="row"><button id="pgResetTree">Reset tree</button><button id="pgClear">Empty tree</button><span class="mut small" id="pgStatus"></span></div>
+      <div><div class="lbl">Console</div><pre class="outbox" id="pgOut" style="max-height:22vh; overflow:auto"></pre></div>
+      <div class="dia"><svg class="tree" id="pgSvg"></svg></div>
+    </div>
+  </div>
+</section>
+
+</main>
+<nav class="nav" aria-label="Slides">
+  <div class="prog" id="prog"></div>
+  <span class="ttl" id="ttl"></span>
+  <button id="prev" aria-label="Previous slide">&lsaquo;</button>
+  <span class="cnt" id="cnt"></span>
+  <button id="next" aria-label="Next slide">&rsaquo;</button>
+</nav>
+</div>
+
+<script>
+(() => {
+'use strict';
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const clone = o => JSON.parse(JSON.stringify(o));
+const lerp = (a,b,t) => a + (b-a)*t;
+const ease = t => t<.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2;
+let UID = 0;
+const nid = () => 'n' + (++UID);
+
+/* ================= code display ================= */
+const KW = /\b(def|class|while|if|else|elif|return|for|in|not|is|None|True|False|and|or|self)\b/g;
+function hlLine(line){
+  let code = line, cm = '';
+  const h = line.indexOf('#');
+  if (h >= 0 && (line.slice(0,h).split('"').length % 2 === 1)) { code = line.slice(0,h); cm = line.slice(h); }
+  const parts = code.split(/("[^"]*")/);
+  const out = parts.map((p,i) => i%2 ? '<span class="st">'+esc(p)+'</span>' : esc(p).replace(KW, m => m === 'self' ? m : '<span class="kw">'+m+'</span>')).join('');
+  return out + (cm ? '<span class="cm">'+esc(cm)+'</span>' : '');
+}
+function renderCode(pre, text, nums=true){
+  pre.innerHTML = text.split('\n').map((l,i) =>
+    '<span class="ln">' + (nums ? '<span class="no">'+(i+1)+'</span>' : '') + (hlLine(l) || ' ') + '</span>').join('');
+}
+
+/* ================= tree state ================= */
+// s = {n:{id:{v,l,r}}, root, hl:{id:cls}, tags:{id:[names]}, slot:{p,side}|null, pos:{id:{gx,gy}}|null}
+function blank(){ return {n:{}, root:null, hl:{}, tags:{}, slot:null, pos:null}; }
+function addRaw(s, v, id){
+  id = id || nid();
+  s.n[id] = {v, l:null, r:null};
+  if (s.root == null) { s.root = id; return id; }
+  let c = s.root;
+  for (;;) {
+    const nd = s.n[c];
+    if (v < nd.v) { if (nd.l == null) { nd.l = id; break; } c = nd.l; }
+    else { if (nd.r == null) { nd.r = id; break; } c = nd.r; }
+  }
+  return id;
+}
+function tree(values){ const s = blank(); values.forEach(v => addRaw(s, v, 'v' + v)); return s; }
+function byVal(s, v){ for (const id in s.n) if (s.n[id].v === v && reachable(s).has(id)) return id; return null; }
+function reachable(s){
+  const r = new Set();
+  const w = id => { if (id == null || r.has(id)) return; r.add(id); w(s.n[id].l); w(s.n[id].r); };
+  w(s.root); return r;
+}
+function heightOf(s, id = s.root){ return id == null ? 0 : 1 + Math.max(heightOf(s, s.n[id].l), heightOf(s, s.n[id].r)); }
+function inorder(s, id = s.root, out = []){ if (id == null) return out; inorder(s, s.n[id].l, out); out.push(id); inorder(s, s.n[id].r, out); return out; }
+function subtree(s, id, set = new Set()){ if (id == null) return set; set.add(id); subtree(s, s.n[id].l, set); subtree(s, s.n[id].r, set); return set; }
+function prune(s){ const r = reachable(s); for (const id in s.n) if (!r.has(id)) delete s.n[id]; return s; }
+
+/* ================= layout ================= */
+// grid coords: gx = in-order index, gy = depth
+function gridOf(s){
+  const P = {}; let i = 0, rows = 0;
+  if (s.pos) {
+    for (const id in s.pos) { P[id] = {...s.pos[id]}; rows = Math.max(rows, s.pos[id].gy + 1); i = Math.max(i, s.pos[id].gx + 1); }
+    return {P, cols:i, rows, abs:true};
+  }
+  const sl = s.slot;
+  const walk = (id, d) => {
+    if (id == null) return;
+    rows = Math.max(rows, d + 1);
+    const nd = s.n[id];
+    if (sl && sl.p === id && sl.side === 'l') { P.__slot = {gx:i++, gy:d+1}; rows = Math.max(rows, d + 2); } else walk(nd.l, d + 1);
+    P[id] = {gx:i++, gy:d};
+    if (sl && sl.p === id && sl.side === 'r') { P.__slot = {gx:i++, gy:d+1}; rows = Math.max(rows, d + 2); } else walk(nd.r, d + 1);
+  };
+  if (s.root == null && sl) { P.__slot = {gx:0, gy:0}; i = 1; rows = 1; }
+  else walk(s.root, 0);
+  return {P, cols:i, rows, abs:false};
+}
+function boundsOf(states, o = {}){
+  let cols = o.minCols || 1, rows = o.minRows || 1;
+  for (const s of states) { const g = gridOf(s); cols = Math.max(cols, g.cols); rows = Math.max(rows, g.rows); }
+  return {cols, rows};
+}
+
+/* ================= tree view ================= */
+const RR = 23;
+class TreeView {
+  constructor(svg, o = {}){
+    this.svg = svg; this.o = Object.assign({SX:58, SY:68, padTop:40, root:true}, o);
+    this.F = null; this.raf = 0; this.b = null;
+    if (o.onClick) svg.addEventListener('click', e => { const t = e.target.closest('[data-id]'); if (t) o.onClick(t.dataset.id); });
+  }
+  setBounds(b){
+    const R = this.o.r || RR;
+    if (this.b && b.cols === this.b.cols && b.rows === this.b.rows) return false;
+    this.b = b;
+    const {SX, SY, padTop} = this.o;
+    this.w = 16*2 + (b.cols - 1) * SX + 2*R;
+    this.h = padTop + (b.rows - 1) * SY + 2*R + 18;
+    this.svg.setAttribute('viewBox', `0 0 ${this.w} ${this.h}`);
+    this.svg.style.width = (this.o.scale ? this.w * this.o.scale : this.w) + 'px';
+    this.svg.style.setProperty('--w', this.w);
+    this.F = null;
+    return true;
+  }
+  frameOf(s){
+    const R = this.o.r || RR;
+    const g = gridOf(s), {SX, SY, padTop} = this.o;
+    const off = g.abs ? 0 : (this.b.cols - g.cols) / 2;
+    const F = {};
+    for (const id in g.P) F[id] = {x:16 + R + (g.P[id].gx + off) * SX, y:padTop + R + g.P[id].gy * SY, o:1};
+    return F;
+  }
+  show(s, anim = true){
+    if (!this.b) this.setBounds(boundsOf([s], this.o));
+    const T = this.frameOf(s);
+    cancelAnimationFrame(this.raf);
+    const A = this.cur || this.F;
+    this.s = s;
+    if (!anim || !A || REDUCED) { this.F = T; this.cur = null; this.draw(s, T); return; }
+    const t0 = performance.now(), D = this.o.dur || 560;
+    const ids = new Set([...Object.keys(A), ...Object.keys(T)]);
+    const frame = now => {
+      const k = Math.min(1, (now - t0) / D), e = ease(k), F = {};
+      for (const id of ids) {
+        const a = A[id], b = T[id];
+        if (a && b) F[id] = {x:lerp(a.x,b.x,e), y:lerp(a.y,b.y,e), o:lerp(a.o,b.o,e)};
+        else if (b) F[id] = {x:b.x, y:lerp(b.y-18,b.y,e), o:e};
+        else if (a.o > 0.01) F[id] = {x:a.x, y:a.y, o:a.o*(1-e), ghost:true};
+      }
+      this.draw(s, F, A);
+      this.cur = F;
+      if (k < 1) this.raf = requestAnimationFrame(frame); else { this.F = T; this.cur = null; this.draw(s, T); }
+    };
+    this.raf = requestAnimationFrame(frame);
+  }
+  draw(s, F, A){
+    const R = this.o.r || RR;
+    const prev = this.prevS;
+    let h = '';
+    const hl = s.hl || {}, tags = s.tags || {};
+    const isPath = id => /\b(path|cur|found|done|wait|am)\b/.test(hl[id] || '');
+    // edges
+    for (const id in F) {
+      if (id === '__slot' || F[id].ghost) continue;
+      const nd = s.n[id]; if (!nd) continue;
+      for (const side of ['l','r']) {
+        const c = nd[side];
+        if (c != null && F[c] && !F[c].ghost) {
+          const a = F[id], b = F[c], dx = b.x - a.x, dy = b.y - a.y, L = Math.hypot(dx,dy) || 1;
+          const op = Math.min(a.o, b.o);
+          const p = isPath(id) && isPath(c) && !/dim/.test(hl[c]||'');
+          h += `<line class="eg${p?' p':''}" x1="${a.x+dx/L*R}" y1="${a.y+dy/L*R}" x2="${b.x-dx/L*R}" y2="${b.y-dy/L*R}" opacity="${op.toFixed(3)}"/>`;
+          if (this.o.sides) { const lab = this.o.sides === 'next' ? 'next' : side==='l'?'left':'right'; const dx2 = this.o.sides === 'next' ? 0 : (side==='l'?-12:12); h += `<text class="side" x="${(a.x+b.x)/2 + dx2}" y="${(a.y+b.y)/2 - 6}" opacity="${op.toFixed(3)}">${lab}</text>`; }
+        }
+      }
+      if (s.slot && s.slot.p === id && F.__slot) {
+        const a = F[id], b = F.__slot, dx = b.x - a.x, dy = b.y - a.y, L = Math.hypot(dx,dy) || 1;
+        h += `<line class="eg slot" x1="${a.x+dx/L*R}" y1="${a.y+dy/L*R}" x2="${b.x-dx/L*R}" y2="${b.y-dy/L*R}" opacity="${Math.min(a.o,b.o).toFixed(3)}"/>`;
+      }
+    }
+    // ghosts (nodes leaving) use the old state's value
+    for (const id in F) {
+      const f = F[id];
+      if (id === '__slot') {
+        h += `<g opacity="${f.o.toFixed(3)}"><circle class="slotc" cx="${f.x}" cy="${f.y}" r="${R-3}"/><text class="slott" x="${f.x}" y="${f.y}">None</text></g>`;
+        continue;
+      }
+      const nd = s.n[id] || (this.lastS && this.lastS.n[id]);
+      if (!nd) continue;
+      const cls = f.ghost ? ((this.lastS && this.lastS.hl && this.lastS.n[id] && this.lastS.hl[id]) || '').replace(/\bcur\b/, '') : (hl[id] || '');
+      const clk = this.o.onClick && !f.ghost ? ' clk' : '';
+      h += `<g class="nd ${cls}${clk}" data-id="${id}" opacity="${f.o.toFixed(3)}" transform="translate(${f.x.toFixed(2)},${f.y.toFixed(2)})">`
+        + `<circle class="ring" r="${R+6}"/><circle class="c" r="${R}"/><text class="v">${esc(nd.v)}</text></g>`;
+    }
+    // tags
+    for (const id in F) {
+      const f = F[id]; if (f.ghost) continue;
+      const list = (tags[id] || []).slice();
+      if (this.o.root && id === s.root && !s.pos) list.push('root');
+      if (!list.length) continue;
+      const am = list.some(t => t.startsWith('!'));
+      const names = list.map(t => t.replace(/^!/, ''));
+      const label = names.join(', ');
+      const onlyRoot = names.length === 1 && names[0] === 'root';
+      const ring = /cur/.test(hl[id]||'') ? 5 : 0;
+      const tw = label.length * 7.9 + 6, th = 14;
+      // candidate spots: above, below, left, right (text baseline y)
+      const cands = [
+        {x:f.x, y:f.y - R - 8 - ring, a:'middle'},
+        {x:f.x, y:f.y + R + 17 + ring, a:'middle'},
+        {x:f.x - R - 6 - ring, y:f.y + 5, a:'end'},
+        {x:f.x + R + 6 + ring, y:f.y + 5, a:'start'}
+      ];
+      const box = c => { const x0 = c.a === 'middle' ? c.x - tw/2 : c.a === 'end' ? c.x - tw : c.x; return {x0, x1:x0 + tw, y0:c.y - th + 3, y1:c.y + 3}; };
+      const hits = c => {
+        const bx = box(c);
+        if (bx.y0 < 0) return true;
+        for (const k in F) {
+          if (k === id || F[k].ghost) continue;
+          const n = F[k], cx = Math.max(bx.x0, Math.min(n.x, bx.x1)), cy = Math.max(bx.y0, Math.min(n.y, bx.y1));
+          if (Math.hypot(cx - n.x, cy - n.y) < R + 1) return true;
+        }
+        return false;
+      };
+      const c = cands.find(c => !hits(c)) || cands[0];
+      h += `<text class="tag${onlyRoot?' rt':''}${am?' am':''}" text-anchor="${c.a}" x="${c.x}" y="${c.y}" opacity="${f.o.toFixed(3)}">${esc(label)}</text>`;
+    }
+    this.svg.innerHTML = h;
+    if (!A) this.lastS = s;
+    else if (!this._keep) { /* keep old state for ghosts until done */ }
+  }
+}
+// make ghosts able to read old values
+const _show = TreeView.prototype.show;
+TreeView.prototype.show = function(s, anim){ if (this.s) this.lastS = this.s; return _show.call(this, s, anim); };
+
+/* ================= step recorder ================= */
+class Rec {
+  constructor(s){ this.s = clone(s); this.s.hl = {}; this.s.tags = {}; this.s.slot = null; this.steps = []; this.out = []; this.stack = []; this.cmp = ''; }
+  n(id){ return this.s.n[id]; }
+  push(line, note, extra = {}){
+    this.steps.push({s:clone(this.s), line, note, out:this.out.slice(), stack:this.stack.slice(), cmp:this.cmp, ...extra});
+    this.cmp = '';
+  }
+  finish(note, keepHl = false){
+    this.s.tags = {}; this.s.slot = null; if (!keepHl) this.s.hl = {};
+    this.stack = [];
+    this.push(null, note);
+    return this.steps;
+  }
+}
+
+/* ================= code ================= */
+const CODE = {
+nodeLL:
+`class Node:
+    def __init__(self, value):
+        self.value = value
+        self.next = None`,
+nodeT:
+`class Node:
+    def __init__(self, value):
+        self.value = value
+        self.left = None
+        self.right = None`,
+tree:
+`class Tree:
+    def __init__(self):
+        self.root = None`,
+add:
+`def add(self, value):
+    if self.root is None:
+        self.root = Node(value)
+        return
+    current = self.root
+    while True:
+        if value < current.value:
+            if current.left is None:
+                current.left = Node(value)
+                return
+            current = current.left
+        else:
+            if current.right is None:
+                current.right = Node(value)
+                return
+            current = current.right`,
+find:
+`def find(self, value):
+    current = self.root
+    while current is not None:
+        print(current.value)
+        if value == current.value:
+            print("Found", value)
+            return
+        if value < current.value:
+            current = current.left
+        else:
+            current = current.right
+    print(value, "is not in the tree")`,
+print:
+`def print(self):
+    self.print_from(self.root)
+
+def print_from(self, node):
+    if node is None:
+        return
+    self.print_from(node.left)
+    print(node.value)
+    self.print_from(node.right)`,
+hand:
+`node.left = self.delete_from(node.left, value)`,
+delete:
+`def delete(self, value):
+    self.root = self.delete_from(self.root, value)
+
+def delete_from(self, node, value):
+    if node is None:
+        return None
+    if value < node.value:
+        node.left = self.delete_from(node.left, value)
+    elif value > node.value:
+        node.right = self.delete_from(node.right, value)
+    else:
+        # no children
+        if node.left is None and node.right is None:
+            return None
+        # one child
+        if node.left is None:
+            return node.right
+        if node.right is None:
+            return node.left
+        # two children
+        smallest = node.right
+        while smallest.left is not None:
+            smallest = smallest.left
+        node.value = smallest.value
+        node.right = self.delete_from(node.right, smallest.value)
+    return node`,
+balance:
+`def balance(self):
+    values = []
+    self.collect(self.root, values)
+    self.root = self.build(values)
+
+def collect(self, node, values):
+    if node is None:
+        return
+    self.collect(node.left, values)
+    values.append(node.value)
+    self.collect(node.right, values)
+
+def build(self, values):
+    if len(values) == 0:
+        return None
+    middle = len(values) // 2
+    node = Node(values[middle])
+    node.left = self.build(values[:middle])
+    node.right = self.build(values[middle + 1:])
+    return node`
+};
+
+/* ================= generators ================= */
+const GEN = {
+add(s0, v){
+  const r = new Rec(s0), S = r.s;
+  r.push(1, `Calling tree.add(${v})`);
+  if (S.root == null) {
+    r.push(2, 'The tree is empty');
+    const id = addRaw(S, v, 'v' + v); S.hl[id] = 'found';
+    r.push(3, `${v} becomes the root`);
+    r.push(4, 'Done');
+    return r.finish(`Done. The tree has one node, ${v}, and it's the root.`, true);
+  }
+  r.push(2, 'The tree is not empty');
+  let c = S.root; S.tags = {[c]:['current']}; S.hl[c] = 'cur';
+  r.push(5, 'current starts at the root');
+  for (;;) {
+    const nd = S.n[c];
+    const left = v < nd.v;
+    r.cmp = left ? `${v} < ${nd.v}  →  go left` : `${v} > ${nd.v}  →  go right`;
+    r.push(left ? 7 : 12, left ? `${v} is smaller than ${nd.v}, so go left` : `${v} is bigger than ${nd.v}, so go right`);
+    const side = left ? 'l' : 'r', base = left ? 8 : 13, word = left ? 'left' : 'right';
+    if (nd[side] == null) {
+      S.slot = {p:c, side};
+      r.push(base, `current.${word} is None`);
+      S.slot = null;
+      const id = 'v' + v; S.n[id] = {v, l:null, r:null}; nd[side] = id; S.hl[id] = 'found';
+      r.push(base + 1, `The new node goes there`);
+      r.push(base + 2, 'Done');
+      for (const k in S.hl) if (k !== id) S.hl[k] = 'path';
+      return r.finish(`Done. It took ${r.steps.filter(x => x.cmp).length} comparisons to find the spot, one for each level we went down.`, true);
+    }
+    r.push(base, `current.${word} is ${S.n[nd[side]].v}, not None`);
+    S.hl[c] = 'path'; c = nd[side]; S.hl[c] = 'cur'; S.tags = {[c]:['current']};
+    r.push(base + 3, `current moves ${word}`);
+  }
+},
+find(s0, v){
+  const r = new Rec(s0), S = r.s;
+  r.push(1, `Calling tree.find(${v})`);
+  let c = S.root, prev = null, side = null;
+  S.tags = {[c]:['current']}; S.hl[c] = 'cur';
+  r.push(2, 'current starts at the root');
+  for (;;) {
+    if (c == null) {
+      r.push(3, 'current is None, so the loop stops');
+      r.out.push(`${v} is not in the tree`);
+      r.push(12, `${v} is not in the tree`);
+      return r.finish(`Done. find checked ${r.out.length - 1} nodes before it reached None.`, true);
+    }
+    const nd = S.n[c];
+    r.push(3, 'current is not None');
+    r.out.push(String(nd.v));
+    r.push(4, `Print ${nd.v}`);
+    if (v === nd.v) {
+      r.cmp = `${v} == ${nd.v}`;
+      S.hl[c] = 'found';
+      r.push(5, `${v} == ${nd.v}`);
+      r.out.push(`Found ${v}`);
+      r.push(6, `Print "Found ${v}"`);
+      r.push(7, 'Return');
+      return r.finish(`Done. find checked ${r.out.length - 1} nodes, one on each level it went down.`, true);
+    }
+    const left = v < nd.v;
+    r.cmp = left ? `${v} < ${nd.v}  →  go left` : `${v} > ${nd.v}  →  go right`;
+    r.push(left ? 8 : 10, left ? `${v} is smaller than ${nd.v}, so go left` : `${v} is bigger than ${nd.v}, so go right`);
+    S.hl[c] = 'path';
+    const nx = left ? nd.l : nd.r;
+    if (nx == null) { S.slot = {p:c, side:left?'l':'r'}; S.tags = {__slot:['current']}; }
+    else { S.hl[nx] = 'cur'; S.tags = {[nx]:['current']}; }
+    r.push(left ? 9 : 11, nx == null ? `current.${left?'left':'right'} is None, so current becomes None` : `current moves ${left?'left':'right'}`);
+    c = nx;
+  }
+},
+print(s0){
+  const r = new Rec(s0), S = r.s;
+  r.push(1, 'Calling tree.print()');
+  r.stack = ['print()'];
+  r.push(2, 'print_from starts at the root');
+  const visit = (id, parent, side) => {
+    if (id == null) {
+      r.stack.unshift('print_from(None)');
+      S.slot = {p:parent, side}; S.tags = {__slot:['node']};
+      r.push(6, `${S.n[parent].v} has no ${side==='l'?'left':'right'} child, so node is None. Return.`);
+      S.slot = null; r.stack.shift();
+      return;
+    }
+    const nd = S.n[id];
+    r.stack.unshift(`print_from(${nd.v})`);
+    S.hl[id] = 'cur'; S.tags = {[id]:['node']};
+    r.push(5, `print_from(${nd.v}) starts. node is not None.`);
+    S.hl[id] = 'wait';
+    r.push(7, `Print the left side of ${nd.v} first`);
+    visit(nd.l, id, 'l');
+    S.hl[id] = 'cur'; S.tags = {[id]:['node']};
+    r.out.push(String(nd.v));
+    r.push(8, `The left side of ${nd.v} is done. Print ${nd.v}.`);
+    S.hl[id] = 'done cur';
+    r.push(9, `Print the right side of ${nd.v}`);
+    S.hl[id] = 'done';
+    visit(nd.r, id, 'r');
+    r.stack.shift();
+    S.tags = {[id]:['node']}; S.hl[id] = 'done cur';
+    r.push(9, `print_from(${nd.v}) is done. Go back to the call that called it.`);
+    S.hl[id] = 'done';
+  };
+  visit(S.root, null, null);
+  r.stack = [];
+  return r.finish('Done. Every node was visited once and the values printed in sorted order.', true);
+},
+delete(s0, v){
+  const r = new Rec(s0), S = r.s;
+  r.push(1, `Calling tree.delete(${v})`);
+  r.stack = [`delete(${v})`];
+  const frame = (id, t) => `delete_from(${id==null?'None':S.n[id].v}, ${t})`;
+  const focus = (id, extra) => { S.tags = id ? {[id]:['node']} : {}; if (extra) Object.assign(S.tags, extra); };
+  const del = (id, t, parent, side) => {
+    r.stack.unshift(frame(id, t));
+    if (id == null) {
+      S.slot = {p:parent, side}; S.tags = {__slot:['node']};
+      r.push(6, `node is None, so ${t} is not in the tree. Return None.`);
+      S.slot = null; r.stack.shift();
+      return null;
+    }
+    const nd = S.n[id];
+    focus(id); const old = S.hl[id]; S.hl[id] = 'cur';
+    r.push(5, `Look at ${nd.v}`);
+    if (t !== nd.v) {
+      const left = t < nd.v, sd = left ? 'l' : 'r';
+      r.cmp = left ? `${t} < ${nd.v}  →  go left` : `${t} > ${nd.v}  →  go right`;
+      r.push(left ? 7 : 9, `${t} is ${left?'smaller':'bigger'} than ${nd.v}, so delete it from the ${left?'left':'right'} side`);
+      S.hl[id] = 'wait';
+      const res = del(nd[sd], t, id, sd);
+      const changed = res !== nd[sd];
+      nd[sd] = res;
+      S.hl[id] = 'cur'; focus(id);
+      r.push(left ? 8 : 10, changed
+        ? `Back in delete_from(${nd.v}). ${nd.v}.${left?'left':'right'} = ${res==null?'None':S.n[res].v}`
+        : `Back in delete_from(${nd.v}). ${nd.v}.${left?'left':'right'} = ${S.n[res]?S.n[res].v:'None'}, the same node as before`);
+      r.push(26, `Return ${nd.v}`);
+      S.hl[id] = old && old !== 'cur' ? old : '';
+      r.stack.shift();
+      return id;
+    }
+    S.hl[id] = 'bad';
+    r.push(11, `${t} == ${nd.v}, found it`);
+    if (nd.l == null && nd.r == null) {
+      r.push(13, `${t} has no children`);
+      r.push(14, 'Return None');
+      r.stack.shift(); S.tags = {};
+      return null;
+    }
+    r.push(13, `${t} has at least one child`);
+    if (nd.l == null) {
+      r.push(16, `${t} has no left child`);
+      S.hl[nd.r] = 'am';
+      r.push(17, `Return its right child, ${S.n[nd.r].v}`);
+      const c = nd.r; r.stack.shift(); S.tags = {};
+      return c;
+    }
+    r.push(16, `${t} has a left child`);
+    if (nd.r == null) {
+      r.push(18, `${t} has no right child`);
+      S.hl[nd.l] = 'am';
+      r.push(19, `Return its left child, ${S.n[nd.l].v}`);
+      const c = nd.l; r.stack.shift(); S.tags = {};
+      return c;
+    }
+    r.push(18, `${t} has a right child too, so it has two children`);
+    let sm = nd.r; S.hl[sm] = 'am'; focus(id, {[sm]:['!smallest']});
+    r.push(21, 'smallest starts at the right child');
+    while (S.n[sm].l != null) {
+      r.push(22, `${S.n[sm].v} has a left child`);
+      S.hl[sm] = 'R'; sm = S.n[sm].l; S.hl[sm] = 'am'; focus(id, {[sm]:['!smallest']});
+      r.push(23, 'smallest moves left');
+    }
+    r.push(22, `${S.n[sm].v} has no left child, so it's the smallest value on the right side`);
+    const sv = S.n[sm].v;
+    nd.v = sv; S.hl[id] = 'am'; r.stack[0] = frame(id, t);
+    r.push(24, `Copy ${sv} into this node. ${sv} is in the tree twice for now.`);
+    for (const k in S.hl) if (S.hl[k] === 'R') S.hl[k] = '';
+    S.hl[sm] = 'bad';
+    r.push(25, `Delete the old ${sv} from the right side`);
+    S.hl[id] = 'wait';
+    const res = del(nd.r, sv, id, 'r');
+    nd.r = res; S.hl[id] = 'am'; focus(id);
+    r.push(25, `Back in delete_from(${sv}). ${sv}.right = ${res==null?'None':S.n[res].v}`);
+    r.push(26, `Return ${sv}`);
+    r.stack.shift();
+    return id;
+  };
+  const res = del(S.root, v, null, null);
+  S.root = res;
+  r.stack = [`delete(${v})`];
+  S.tags = {};
+  r.push(2, `self.root = ${res==null?'None':S.n[res].v}`);
+  prune(S);
+  for (const k in S.hl) if (!S.n[k] || S.hl[k] !== 'am') delete S.hl[k];
+  return r.finish(`Done. ${v} is gone and the tree still follows the rule.`, true);
+}
+};
+
+/* ================= player ================= */
+const PLAYERS = [];
+class Player {
+  constructor(root, o = {}){
+    this.o = o; this.steps = []; this.i = 0; this.timer = 0;
+    root.classList.add('pl');
+    root.innerHTML = `<pre class="code"></pre>
+      <div class="pl-side">
+        <div class="pl-ctl"><button data-a="back">Back</button><button data-a="step" class="pri">Step</button><button data-a="play">Play</button><span class="pl-count"></span></div>
+        <p class="pl-note"></p>
+        <div class="pl-cmp"></div>
+        <div class="pl-main">
+          <div class="dia"><svg class="tree"></svg></div>
+          <div class="pl-bot">
+            <div class="pl-stk" hidden><div class="lbl">Call stack (newest on top)</div><div class="cstack"></div></div>
+            <div class="pl-out" hidden><div class="lbl">Output</div><pre class="outbox"></pre></div>
+          </div>
+        </div>
+      </div>`;
+    this.pre = root.querySelector('pre.code');
+    this.note = root.querySelector('.pl-note');
+    this.cmp = root.querySelector('.pl-cmp');
+    this.outBox = root.querySelector('.pl-out'); this.outPre = this.outBox.querySelector('pre');
+    this.stkBox = root.querySelector('.pl-stk'); this.stk = root.querySelector('.cstack');
+    this.count = root.querySelector('.pl-count');
+    this.btn = {}; root.querySelectorAll('[data-a]').forEach(b => { this.btn[b.dataset.a] = b; });
+    this.btn.back.onclick = () => { this.pause(); this.go(this.i - 1); };
+    this.btn.step.onclick = () => { this.pause(); this.i >= this.steps.length - 1 ? this.go(0, false) : this.go(this.i + 1); };
+    this.btn.play.onclick = () => this.timer ? this.pause() : this.play();
+    this.view = new TreeView(root.querySelector('svg'), o.view || {});
+    if (o.code) this.setCode(o.code);
+    PLAYERS.push(this);
+  }
+  setCode(code){ renderCode(this.pre, code); this.pre.classList.toggle('long', code.split('\n').length > 17); this.lineEls = this.pre.querySelectorAll('.ln'); }
+  load(steps){
+    this.pause(); this.steps = steps;
+    const changed = this.view.setBounds(boundsOf(steps.map(s => s.s), this.o.view || {}));
+    this.go(0, !changed);
+  }
+  go(i, anim = true){
+    i = Math.max(0, Math.min(this.steps.length - 1, i)); this.i = i;
+    const st = this.steps[i];
+    this.lineEls.forEach((el, k) => el.classList.toggle('on', k + 1 === st.line));
+    const on = this.pre.querySelector('.ln.on');
+    if (on && this.pre.scrollHeight > this.pre.clientHeight) on.scrollIntoView({block:'nearest'});
+    this.note.textContent = st.note || '';
+    this.cmp.textContent = st.cmp || '';
+    const anyOut = this.steps.some(s => s.out.length), anyStk = this.steps.some(s => s.stack.length);
+    this.outBox.hidden = !anyOut; this.stkBox.hidden = !anyStk;
+    const prevLen = i > 0 ? this.steps[i-1].out.length : 0;
+    this.outPre.innerHTML = st.out.map((l, k) => k >= prevLen && i > 0 ? `<span class="new">${esc(l)}</span>` : esc(l)).join('\n') || ' ';
+    this.stk.innerHTML = st.stack.map(f => `<div>${esc(f)}</div>`).join('') || '<span class="mut small">empty</span>';
+    this.count.textContent = `Step ${i+1} of ${this.steps.length}`;
+    const end = i >= this.steps.length - 1;
+    this.btn.back.disabled = i === 0;
+    this.btn.step.textContent = end ? 'Start over' : 'Step';
+    this.view.show(st.s, anim);
+  }
+  play(){
+    if (this.i >= this.steps.length - 1) this.go(0, false);
+    this.btn.play.textContent = 'Pause';
+    this.timer = setInterval(() => { this.go(this.i + 1); if (this.i >= this.steps.length - 1) this.pause(); }, this.o.speed || 1100);
+  }
+  pause(){ clearInterval(this.timer); this.timer = 0; if (this.btn) this.btn.play.textContent = 'Play'; }
+}
+function scenarios(rowId, player, list){
+  const row = $(rowId);
+  const pick = i => { [...row.children].forEach((b, k) => b.classList.toggle('sel', k === i)); player.load(list[i][1]()); };
+  list.forEach(([label], i) => { const b = document.createElement('button'); b.textContent = label; b.onclick = () => pick(i); row.appendChild(b); });
+  pick(0);
+}
+const SAMPLE = [8,3,10,1,6,14];
+const BIG = [8,3,10,1,6,14,4,7,13];
+
+/* ================= slide: title ================= */
+(() => {
+  const v = new TreeView($('titleTree'), {root:false, SX:64, SY:78});
+  const order = [50,30,70,20,40,60,80,35,65];
+  const states = []; const s = blank();
+  order.forEach(x => { addRaw(s, x); states.push(clone(s)); });
+  v.setBounds(boundsOf(states));
+  let k = 0;
+  const tick = () => { v.show(states[k], true); k++; if (k < states.length) setTimeout(tick, 260); };
+  v.show(blank(), false);
+  setTimeout(tick, 300);
+})();
+
+/* ================= slide: two pointers ================= */
+(() => {
+  renderCode($('cNodeLL'), CODE.nodeLL, false);
+  renderCode($('cNodeT'), CODE.nodeT, false);
+  const v = new TreeView($('morphSvg'), {root:false, SX:76, SY:84, sides:'next'});
+  const s = blank();
+  const a = nid(), b = nid(), c = nid();
+  s.n[a] = {v:10, l:null, r:null}; s.n[b] = {v:20, l:null, r:null}; s.n[c] = {v:30, l:null, r:null};
+  const ll = clone(s); ll.root = a; ll.n[a].r = b; ll.n[b].r = c;
+  ll.pos = {[a]:{gx:0, gy:0}, [b]:{gx:1.6, gy:0}, [c]:{gx:3.2, gy:0}};
+  ll.tags = {[a]:['head']};
+  const tr = clone(s); tr.root = b; tr.n[b].l = a; tr.n[b].r = c;
+  tr.pos = {[a]:{gx:0.8, gy:1}, [b]:{gx:1.6, gy:0}, [c]:{gx:2.4, gy:1}};
+  tr.tags = {[b]:['root']};
+  v.setBounds({cols:4.2, rows:2});
+  const set = t => {
+    $('morphLL').classList.toggle('sel', !t); $('morphT').classList.toggle('sel', t);
+    v.o.sides = t ? true : 'next';
+    v.show(t ? tr : ll, true);
+    $('morphCap').textContent = t
+      ? 'In the tree 20 is at the top. Its left points to 10 and its right points to 30, so both are one step away.'
+      : 'In a linked list each node points to the next node. To reach 30 we have to go through 10 and 20 first.';
+  };
+  $('morphLL').onclick = () => set(false);
+  $('morphT').onclick = () => set(true);
+  v.show(ll, false);
+  $('morphCap').textContent = 'In a linked list each node points to the next node. To reach 30 we have to go through 10 and 20 first.';
+})();
+
+/* ================= slide: rule ================= */
+(() => {
+  const base = tree([50,25,75,12,37,62,87,6,18,31,43,56,68,81,93]);
+  const v = new TreeView($('ruleSvg'), {SX:54, onClick:id => pick(id)});
+  const pick = id => {
+    const s = clone(base); const nd = s.n[id];
+    const L = subtree(s, nd.l), Rr = subtree(s, nd.r);
+    for (const k in s.n) s.hl[k] = L.has(k) ? 'L' : Rr.has(k) ? 'R' : k === id ? 'cur' : 'dim';
+    v.show(s, false);
+    const vals = set => inorder(s).filter(k => set.has(k)).map(k => s.n[k].v);
+    const lv = vals(L), rv = vals(Rr);
+    $('ruleCap').innerHTML = (lv.length ? `Everything on the <b class="blue">left</b> of ${nd.v} is smaller than it: ${lv.join(', ')}.` : `${nd.v} has nothing on its left.`)
+      + ' ' + (rv.length ? `Everything on the <b class="am">right</b> is bigger: ${rv.join(', ')}.` : `It has nothing on its right.`);
+  };
+  v.show(base, false);
+  pick(byVal(base, 25));
+})();
+
+/* ================= slide: race ================= */
+(() => {
+  const order = [50,25,75,12,37,62,87,6,18,31,43,56,68,81,93];
+  const sorted = order.slice();
+  const base = tree(order);
+  const v = new TreeView($('raceSvg'), {SX:54, SY:56, padTop:30});
+  v.setBounds(boundsOf([base]));
+  v.show(base, false);
+  const llBox = $('raceLL');
+  llBox.innerHTML = sorted.map((x,i) => `<span class="chip" data-i="${i}">${x}</span>` + (i < sorted.length-1 ? '<span class="arr">→</span>' : '')).join('');
+  const chips = [...llBox.querySelectorAll('.chip')];
+  let target = 81, timer = 0;
+  const targets = [81, 6, 50, 40];
+  targets.forEach(t => { const b = document.createElement('button'); b.textContent = t; b.onclick = () => { target = t; [...$('raceBtns').children].forEach(x => x.classList.toggle('sel', x === b)); reset(); }; $('raceBtns').appendChild(b); });
+  $('raceBtns').children[0].classList.add('sel');
+  function reset(){
+    clearInterval(timer); timer = 0;
+    chips.forEach(c => c.className = 'chip');
+    $('raceLLn').textContent = 0; $('raceTn').textContent = 0;
+    v.show(base, false); $('raceCap').textContent = '';
+    $('raceGo').textContent = 'Start';
+  }
+  $('raceGo').onclick = () => {
+    if (timer) { reset(); return; }
+    reset();
+    $('raceGo').textContent = 'Reset';
+    let li = 0, lDone = false, tDone = false, tc = base.root, tn = 0;
+    const s = clone(base);
+    const pathTo = [];
+    const tick = () => {
+      if (!lDone) {
+        if (li > 0) chips[li-1].className = 'chip seen';
+        if (li >= sorted.length) { lDone = true; }
+        else {
+          chips[li].className = 'chip cur';
+          $('raceLLn').textContent = li + 1;
+          if (sorted[li] === target) { chips[li].className = 'chip ok'; lDone = true; }
+          li++;
+        }
+      }
+      if (!tDone) {
+        if (tc == null) { tDone = true; }
+        else {
+          tn++; $('raceTn').textContent = tn;
+          for (const k of pathTo) s.hl[k] = 'path';
+          s.hl[tc] = 'cur'; pathTo.push(tc);
+          if (s.n[tc].v === target) { s.hl[tc] = 'found'; tDone = true; }
+          else tc = target < s.n[tc].v ? s.n[tc].l : s.n[tc].r;
+          if (tc == null && !tDone) tDone = true;
+          v.show(clone(s), true);
+        }
+        if (tDone && !lDone) $('raceCap').textContent = `The tree is done after ${tn} checks. The linked list is still going.`;
+      }
+      if (lDone && tDone) {
+        clearInterval(timer); timer = -1;
+        const found = sorted.includes(target);
+        const ln = Math.min(li, sorted.length);
+        $('raceCap').innerHTML = found
+          ? (ln <= tn ? `Found ${target}. ${target} happens to be near the head of the linked list, so it only took ${ln} ${ln===1?'check':'checks'} there. The tree took ${tn}. Try a value near the end of the list.` : `Found ${target}. The linked list checked ${ln} nodes and the tree only checked ${tn}.`)
+          : `${target} isn't in either one. The linked list had to check all ${ln} nodes to know that, but the tree only checked ${tn} before it reached None.`;
+        if (!found) chips.forEach(c => c.className = 'chip seen');
+      }
+    };
+    tick();
+    timer = setInterval(tick, 520);
+  };
+})();
+
+/* ================= slide: binary search ================= */
+(() => {
+  const arr = [4,9,15,23,31,37,42,56,71];
+  const s = blank(); const idOf = {};
+  const build = (lo, hi) => { if (lo > hi) return null; const m = (lo + hi) >> 1; const id = nid(); idOf[m] = id; s.n[id] = {v:arr[m], l:build(lo, m-1), r:build(m+1, hi)}; return id; };
+  s.root = build(0, arr.length - 1);
+  const v = new TreeView($('bsSvg'), {SX:52, SY:60, padTop:36});
+  v.setBounds(boundsOf([s]));
+  $('bsChips').innerHTML = arr.map((x,i) => `<span class="chip" data-i="${i}">${x}<span class="mk"></span></span>`).join('');
+  const chips = [...$('bsChips').querySelectorAll('.chip')];
+  let steps = [], i = 0;
+  function plan(t){
+    const out = []; let lo = 0, hi = arr.length - 1;
+    out.push({lo, hi, mid:null, cap:`We're looking for ${t}. low and high start at the two ends of the list.`});
+    while (lo <= hi) {
+      const m = (lo + hi) >> 1;
+      if (arr[m] === t) { out.push({lo, hi, mid:m, found:true, cap:`The middle is ${arr[m]}, so we found it. The tree found it at the same node.`}); return out; }
+      const go = t < arr[m] ? 'left' : 'right';
+      out.push({lo, hi, mid:m, cap:`The middle is ${arr[m]}. ${t} is ${t<arr[m]?'smaller':'bigger'}, so it can't be in the ${go === 'left' ? 'right' : 'left'} half. In the tree we go ${go}.`});
+      if (t < arr[m]) hi = m - 1; else lo = m + 1;
+    }
+    out.push({lo, hi, mid:null, none:true, cap:`low is now past high, so there's nothing left to check and ${t} isn't in the list. In the tree we reached None.`});
+    return out;
+  }
+  function render(){
+    const st = steps[i], t = s.hl = {};
+    const visited = steps.slice(1, i + 1).filter(x => x.mid != null).map(x => x.mid);
+    chips.forEach((c, k) => {
+      let cls = 'chip';
+      if (k < st.lo || k > st.hi) cls += ' dim';
+      if (k === st.mid) cls += st.found ? ' ok' : ' cur';
+      c.className = cls;
+      const mk = []; if (k === st.lo && st.lo <= st.hi) mk.push('low'); if (k === st.mid) mk.push('mid'); if (k === st.hi && st.lo <= st.hi) mk.push('high');
+      c.querySelector('.mk').innerHTML = mk.map(x => `<span>${x}</span>`).join('');
+    });
+    const ss = clone(s);
+    const live = new Set(); for (let k = st.lo; k <= st.hi; k++) live.add(idOf[k]);
+    for (const k in ss.n) ss.hl[k] = live.has(k) ? '' : 'dim';
+    visited.forEach(m => { ss.hl[idOf[m]] = 'path'; });
+    if (st.mid != null) ss.hl[idOf[st.mid]] = st.found ? 'found' : 'cur';
+    v.show(ss, true);
+    $('bsCap').textContent = st.cap;
+    $('bsBack').disabled = i === 0;
+    $('bsStep').textContent = i >= steps.length - 1 ? 'Start over' : 'Step';
+  }
+  [37, 71, 20].forEach((t, k) => {
+    const b = document.createElement('button'); b.textContent = t;
+    b.onclick = () => { [...$('bsBtns').children].forEach(x => x.classList.toggle('sel', x === b)); steps = plan(t); i = 0; render(); };
+    $('bsBtns').appendChild(b);
+  });
+  $('bsStep').onclick = () => { i = i >= steps.length - 1 ? 0 : i + 1; render(); };
+  $('bsBack').onclick = () => { i = Math.max(0, i - 1); render(); };
+  $('bsBtns').children[0].click();
+})();
+
+/* ================= slide: tree class ================= */
+(() => {
+  renderCode($('cTree'), CODE.tree, false);
+  const v = new TreeView($('tcSvg'));
+  const empty = blank(); empty.slot = {p:null}; empty.tags = {__slot:['root']};
+  const full = tree(SAMPLE);
+  v.setBounds(boundsOf([full]));
+  $('tcEmpty').onclick = () => { $('tcEmpty').classList.add('sel'); $('tcOne').classList.remove('sel'); v.show(empty, true); };
+  $('tcOne').onclick = () => { $('tcOne').classList.add('sel'); $('tcEmpty').classList.remove('sel'); v.show(full, true); };
+  v.show(empty, false);
+})();
+
+/* ================= slide: game ================= */
+(() => {
+  const v = new TreeView($('gSvg'), {SX:56, SY:60, padTop:36});
+  const queue = [6, 13, 2, 9, 7, 12, 16];
+  let s, qi, cur;
+  v.setBounds(boundsOf([tree([8,3,10,1,6,14,13,2,9,7,12,16])], {}));
+  function reset(){
+    s = tree([8,3,10,1,14]); qi = 0; start();
+
+  }
+  function start(){
+    if (qi >= queue.length) {
+      s.hl = {}; s.tags = {}; v.show(clone(s), true);
+      $('gVal').textContent = '';
+      $('gMsg').className = ''; $('gMsg').textContent = 'All of the values have been added. Press Start over to try again.';
+      $('gLeft').disabled = $('gRight').disabled = true;
+      return;
+    }
+    $('gLeft').disabled = $('gRight').disabled = false;
+    cur = s.root; s.hl = {[cur]:'cur'}; s.tags = {[cur]:['current']};
+    $('gVal').textContent = queue[qi];
+    $('gMsg').className = ''; $('gMsg').textContent = `Is ${queue[qi]} smaller or bigger than ${s.n[cur].v}?`;
+    v.show(clone(s), true);
+  }
+  function choose(goLeft){
+    const val = queue[qi], nd = s.n[cur], right = val < nd.v;
+    const msg = $('gMsg');
+    if (goLeft !== right) {
+      msg.className = 'err';
+      msg.textContent = `${val} is ${val < nd.v ? 'smaller' : 'bigger'} than ${nd.v}, so it has to go ${val < nd.v ? 'left' : 'right'}.`;
+      return;
+    }
+    const side = goLeft ? 'l' : 'r';
+    msg.className = '';
+    if (nd[side] == null) {
+      const id = 'v' + val; s.n[id] = {v:val, l:null, r:null}; nd[side] = id;
+      s.hl[cur] = 'path'; s.hl[id] = 'found'; s.tags = {};
+      msg.textContent = `${val} is ${goLeft?'smaller':'bigger'} than ${nd.v} and the ${goLeft?'left':'right'} spot is empty, so ${val} goes there.`;
+      v.show(clone(s), true);
+      $('gLeft').disabled = $('gRight').disabled = true;
+      qi++;
+      setTimeout(start, 2400);
+    } else {
+      msg.textContent = `${val} is ${goLeft?'smaller':'bigger'} than ${nd.v}, so we go ${goLeft?'left':'right'}. ${s.n[nd[side]].v} is already there, so is ${val} smaller or bigger than ${s.n[nd[side]].v}?`;
+      s.hl[cur] = 'path'; cur = nd[side]; s.hl[cur] = 'cur'; s.tags = {[cur]:['current']};
+      v.show(clone(s), true);
+    }
+  }
+  $('gLeft').onclick = () => choose(true);
+  $('gRight').onclick = () => choose(false);
+  $('gReset').onclick = reset;
+  reset();
+})();
+
+/* ================= players ================= */
+scenarios('addSc', new Player($('addPl'), {code:CODE.add}), [
+  ['add(6)', () => GEN.add(tree([8,3,10,1,14]), 6)],
+  ['add(13)', () => GEN.add(tree([8,3,10,1,6,14]), 13)],
+  ['Empty tree', () => GEN.add(blank(), 8)]
+]);
+scenarios('findSc', new Player($('findPl'), {code:CODE.find}), [
+  ['find(6)', () => GEN.find(tree(SAMPLE), 6)],
+  ['find(7)', () => GEN.find(tree(SAMPLE), 7)],
+  ['find(14)', () => GEN.find(tree(SAMPLE), 14)]
+]);
+(() => {
+  const p = new Player($('printPl'), {code:CODE.print, speed:900});
+  p.load(GEN.print(tree(SAMPLE)));
+})();
+scenarios('delSc', new Player($('delPl'), {code:CODE.delete, view:{SX:48, SY:48, padTop:32}}), [
+  ['delete(1): no children', () => GEN.delete(tree(BIG), 1)],
+  ['delete(14): one child', () => GEN.delete(tree(BIG), 14)],
+  ['delete(3): two children', () => GEN.delete(tree(BIG), 3)]
+]);
+
+/* ================= slide: print idea ================= */
+(() => {
+  const base = tree(SAMPLE);
+  const v = new TreeView($('piSvg'), {SX:60});
+  v.setBounds(boundsOf([base]));
+  // big-picture steps: root splits, then show sorted output
+  const r = base.root, L = subtree(base, base.n[r].l), Rr = subtree(base, base.n[r].r);
+  const ord = inorder(base).map(k => base.n[k].v);
+  const lv = inorder(base).filter(k => L.has(k)).map(k => base.n[k].v);
+  const rv = inorder(base).filter(k => Rr.has(k)).map(k => base.n[k].v);
+  const steps = [
+    {hl:{}, out:[], cap:`We start at the root, ${base.n[r].v}.`},
+    {hl:Object.fromEntries([...L].map(k => [k,'L']).concat([[r,'cur']])), out:[], cap:`First ${base.n[r].v} prints everything on its left. That side is a smaller tree with ${base.n[base.n[r].l].v} at the top, so ${base.n[base.n[r].l].v} does the same three things.`},
+    {hl:Object.fromEntries([...L].map(k => [k,'done']).concat([[r,'cur']])), out:lv, cap:`The left side printed ${lv.join(', ')}. All of them are smaller than ${base.n[r].v}.`},
+    {hl:Object.fromEntries([...L].map(k => [k,'done']).concat([[r,'done cur']])), out:lv.concat(base.n[r].v), cap:`Now ${base.n[r].v} prints itself.`},
+    {hl:Object.fromEntries([...L].map(k => [k,'done']).concat([...Rr].map(k => [k,'R'])).concat([[r,'done cur']])), out:lv.concat(base.n[r].v), cap:`Last, ${base.n[r].v} prints everything on its right the same way.`},
+    {hl:Object.fromEntries(Object.keys(base.n).map(k => [k,'done'])), out:ord, cap:`Done. The values came out in sorted order because everything smaller than a node is printed before it and everything bigger is printed after it.`}
+  ];
+  let i = 0;
+  const render = () => {
+    const st = steps[i], s = clone(base); s.hl = st.hl;
+    v.show(s, true);
+    $('piOut').innerHTML = st.out.map(x => `<span class="chip seen">${x}</span>`).join('');
+    $('piCap').textContent = st.cap;
+    $('piBack').disabled = i === 0;
+    $('piStep').textContent = i >= steps.length - 1 ? 'Start over' : 'Step';
+  };
+  $('piStep').onclick = () => { i = i >= steps.length - 1 ? 0 : i + 1; render(); };
+  $('piBack').onclick = () => { i = Math.max(0, i - 1); render(); };
+  render();
+})();
+
+/* ================= slide: delete idea (click) ================= */
+(() => {
+  let s, busy = false;
+  const v = new TreeView($('delSvg'), {SX:58, onClick:id => del(id)});
+  v.setBounds(boundsOf([tree(BIG)]));
+  const cap = $('delCap');
+  const reset = () => { s = tree(BIG); v.show(clone(s), true); cap.textContent = '1 has no children, 14 has one child, and 3 and 8 have two children. Try each case.'; };
+  const parentOf = id => { for (const k in s.n) if (s.n[k].l === id || s.n[k].r === id) return k; return null; };
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  const replaceIn = (id, withId) => {
+    const p = parentOf(id);
+    if (p == null) s.root = withId; else if (s.n[p].l === id) s.n[p].l = withId; else s.n[p].r = withId;
+    delete s.n[id];
+  };
+  async function del(id){
+    if (busy || !s.n[id]) return;
+    busy = true;
+    const nd = s.n[id], v0 = nd.v;
+    s.hl = {[id]:'bad'}; v.show(clone(s), true);
+    if (nd.l == null && nd.r == null) {
+      cap.textContent = `${v0} has no children, so we remove it.`;
+      await wait(900); replaceIn(id, null); s.hl = {};
+      v.show(clone(s), true);
+    } else if (nd.l == null || nd.r == null) {
+      const c = nd.l != null ? nd.l : nd.r;
+      s.hl[c] = 'am'; for (const k of subtree(s, c)) if (k !== c) s.hl[k] = 'R';
+      v.show(clone(s), true);
+      cap.textContent = `${v0} has one child, ${s.n[c].v}. ${s.n[c].v} moves up into ${v0}'s place and brings everything under it along.`;
+      await wait(1100); replaceIn(id, c); s.hl = {[c]:'am'};
+      v.show(clone(s), true);
+      await wait(900); s.hl = {}; v.show(clone(s), true);
+    } else {
+      let sm = nd.r; const path = [sm];
+      while (s.n[sm].l != null) { sm = s.n[sm].l; path.push(sm); }
+      cap.textContent = `${v0} has two children. We look for the smallest value on its right side by going right once, then left until there's no left child.`;
+      for (const p of path) { s.hl[p] = 'path'; v.show(clone(s), true); await wait(500); }
+      s.hl[sm] = 'am'; v.show(clone(s), true);
+      cap.textContent = `The smallest value on the right side is ${s.n[sm].v}. We copy it into ${v0}'s node.`;
+      await wait(1100);
+      nd.v = s.n[sm].v; s.hl = {[id]:'am', [sm]:'bad'};
+      v.show(clone(s), true);
+      cap.textContent = `Now ${nd.v} is in the tree twice, so we delete the old copy. It has no left child, so it's easy to delete.`;
+      await wait(1300);
+      replaceIn(sm, s.n[sm].r); s.hl = {[id]:'am'};
+      v.show(clone(s), true);
+      await wait(900); s.hl = {}; v.show(clone(s), true);
+      cap.textContent = `${v0} was replaced by ${nd.v}. Everything on its left is still smaller and everything on its right is still bigger.`;
+    }
+    if (s.root == null) cap.textContent += ' The tree is empty. Press Reset tree.';
+    busy = false;
+  }
+  $('delReset').onclick = () => { if (!busy) reset(); };
+  reset();
+})();
+
+/* ================= slide: why smallest on right ================= */
+(() => {
+  const base = tree(BIG);
+  const v = new TreeView($('wsSvg'), {SX:58, SY:56, padTop:30});
+  v.setBounds(boundsOf([base]));
+  const ord = inorder(base);
+  [8, 3, 6].forEach((x) => {
+    const b = document.createElement('button'); b.textContent = x;
+    b.onclick = () => { [...$('wsBtns').children].forEach(y => y.classList.toggle('sel', y === b)); show(x); };
+    $('wsBtns').appendChild(b);
+  });
+  let timers = [];
+  function show(x){
+    timers.forEach(clearTimeout); timers = [];
+    const id = byVal(base, x), nd = base.n[id];
+    const L = subtree(base, nd.l), Rr = subtree(base, nd.r);
+    const s = clone(base);
+    for (const k in s.n) s.hl[k] = L.has(k) ? 'L' : Rr.has(k) ? 'R' : k === id ? 'bad' : 'dim';
+    v.show(s, false);
+    const pos = ord.indexOf(id), nextId = ord[pos + 1];
+    const chipHtml = (hiNext) => ord.map(k => {
+      let c = 'chip';
+      if (k === id) c += ' bad'; else if (L.has(k)) c += ' seen'; else if (Rr.has(k)) c += ' am'; else c += ' dim';
+      if (hiNext && k === nextId) c = 'chip ok';
+      return `<span class="${c}">${base.n[k].v}</span>`;
+    }).join('');
+    $('wsChips').innerHTML = chipHtml(false);
+    $('wsCap').innerHTML = `We're deleting ${x}. Its left side is <b class="blue">blue</b> and its right side is <b class="am">orange</b>.`;
+    // walk: right once, then left
+    const path = []; let c = nd.r; path.push(c); while (base.n[c].l != null) { c = base.n[c].l; path.push(c); }
+    path.forEach((k, j) => timers.push(setTimeout(() => {
+      const t = clone(s); path.slice(0, j).forEach(q => t.hl[q] = 'path'); t.hl[k] = j === path.length - 1 ? 'ok' : 'cur';
+      t.tags = {[k]:[j === 0 ? 'right' : 'left']};
+      v.show(t, true);
+      if (j === path.length - 1) {
+        $('wsChips').innerHTML = chipHtml(true);
+        $('wsCap').textContent = `${base.n[k].v} is the smallest value on the right side. In sorted order it comes right after ${x}, so it's bigger than everything on the left and smaller than everything else on the right.`;
+      }
+    }, 900 + j * 750)));
+  }
+  $('wsBtns').children[0].click();
+})();
+
+/* ================= slide: hand back ================= */
+(() => {
+  renderCode($('cHand'), CODE.hand, false);
+  const mk = (vals, delV, kind, svgId) => {
+    const s = tree(vals);
+    const v = new TreeView($(svgId), {root:false, SX:52, SY:66, padTop:30});
+    const after = clone(s);
+    const id = byVal(s, delV);
+    if (kind === 'same') { s.hl[id] = 'cur'; after.hl[id] = 'cur'; after.tags = {[id]:['returns 3']}; s.tags = {[id]:['node']}; }
+    v.setBounds(boundsOf([s]));
+    const p = Object.keys(s.n).find(k => s.n[k].l === id || s.n[k].r === id);
+    if (kind !== 'same') {
+      s.hl[id] = 'bad';
+      const side = after.n[p].l === id ? 'l' : 'r';
+      const nd = after.n[id];
+      if (kind === 'none') { after.n[p][side] = null; after.slot = {p, side}; }
+      else { const c = nd.l || nd.r; after.n[p][side] = c; after.hl[c] = 'am'; }
+      delete after.n[id];
+    }
+    let flip = false;
+    v.show(s, false);
+    setInterval(() => { if (!$(svgId).closest('.slide').classList.contains('on')) return; flip = !flip; v.show(flip ? after : s, true); }, 1800);
+  };
+  mk([8,3,10,1,6], 3, 'same', 'hb1');
+  mk([8,3,10,1,6], 6, 'none', 'hb2');
+  mk([8,3,10,14], 10, 'one', 'hb3');
+})();
+
+/* ================= slide: order matters ================= */
+(() => {
+  const A = [4,2,6,1,3,5,7], B = [1,2,3,4,5,6,7];
+  const vA = new TreeView($('omA'), {SX:52, SY:40, padTop:30}), vB = new TreeView($('omB'), {SX:52, SY:40, padTop:30});
+  const bnd = {cols:7, rows:7};
+  vA.setBounds(bnd); vB.setBounds(bnd);
+  let k = 0, sA, sB, timer = 0;
+  const chips = (arr, id) => { $(id).innerHTML = arr.map((x,i) => `<span class="chip${i < k ? ' seen' : i === k ? ' cur' : ''}">${x}</span>`).join(''); };
+  const render = (anim = true) => {
+    const a = clone(sA), b = clone(sB);
+    a.hl = {}; b.hl = {};
+    vA.show(a, anim); vB.show(b, anim);
+    chips(A, 'omChA'); chips(B, 'omChB');
+    $('omHA').textContent = heightOf(sA); $('omHB').textContent = heightOf(sB);
+    $('omNext').disabled = k >= 7; $('omAll').disabled = k >= 7;
+  };
+  const reset = () => { clearInterval(timer); k = 1; sA = tree([A[0]]); sB = tree([B[0]]); render(false); };
+  const next = () => { if (k >= 7) return; addRaw(sA, A[k], 'v' + A[k]); addRaw(sB, B[k], 'v' + B[k]); k++; render(true); };
+  $('omNext').onclick = () => { clearInterval(timer); next(); };
+  $('omAll').onclick = () => { clearInterval(timer); timer = setInterval(() => { next(); if (k >= 7) clearInterval(timer); }, 600); };
+  $('omReset').onclick = reset;
+  reset();
+})();
+
+/* ================= slide: height ================= */
+(() => {
+  const v = new TreeView($('lvSvg'), {root:false, SX:22, SY:46, padTop:8, r:9});
+  const fmt = n => n >= 1e9 ? (n/1e9).toFixed(n >= 1e10 ? 0 : 1).replace(/\.0$/,'') + ' billion' : n >= 1e6 ? (n/1e6).toFixed(n >= 1e7 ? 0 : 1).replace(/\.0$/,'') + ' million' : n.toLocaleString();
+  const full = L => { const s = blank(); const b = (lo, hi) => { if (lo > hi) return null; const m = (lo+hi) >> 1; const id = 'lv' + m; s.n[id] = {v:'', l:b(lo, m-1), r:b(m+1, hi)}; return id; }; s.root = b(1, 2**L - 1); return s; };
+  v.setBounds({cols:31, rows:5});
+  const render = () => {
+    const L = +$('lvR').value, n = 2**L - 1;
+    $('lvN').textContent = L;
+    if (L <= 5) { $('lvDiaWrap').style.display = ''; v.show(full(L), true); } else { $('lvDiaWrap').style.display = 'none'; }
+    $('lvNodes').textContent = fmt(n);
+    $('lvSteps').textContent = L;
+    $('lvLL').textContent = fmt(n);
+    const rows = []; const show = Math.min(L, 12);
+    for (let i = 1; i <= show; i++) {
+      const cnt = 2**(i-1);
+      rows.push(`<div class="lv"><span>level ${i}</span><span><span class="bar" style="display:block; width:${Math.min(100, cnt / 2**(show-1) * 100)}%"></span></span><span>${fmt(cnt)} node${cnt>1?'s':''}</span></div>`);
+    }
+    if (L > show) rows.push(`<div class="lv"><span>...</span><span></span><span></span></div><div class="lv"><span>level ${L}</span><span><span class="bar" style="display:block; width:100%"></span></span><span>${fmt(2**(L-1))} nodes</span></div>`);
+    $('lvList').innerHTML = rows.join('');
+  };
+  $('lvR').oninput = render;
+  render();
+})();
+
+/* ================= slide: space ================= */
+(() => {
+  const v = new TreeView($('spSvg'), {SX:46, SY:42, padTop:30});
+  const bal = tree([4,2,6,1,3,5,7]), lop = tree([1,2,3,4,5,6,7]);
+  v.setBounds({cols:7, rows:7});
+  const deepest = s => { let best = []; const w = (id, path) => { if (id == null) { if (path.length > best.length) best = path.slice(); return; } path.push(id); w(s.n[id].l, path); w(s.n[id].r, path); path.pop(); }; w(s.root, []); return best; };
+  const set = isBal => {
+    $('spBal').classList.toggle('sel', isBal); $('spLop').classList.toggle('sel', !isBal);
+    const s = clone(isBal ? bal : lop); const path = deepest(s);
+    path.forEach(k => s.hl[k] = 'wait'); s.hl[path[path.length-1]] = 'cur';
+    v.show(s, true);
+    $('spStack').innerHTML = path.slice().reverse().map(k => `<div>print_from(${s.n[k].v})</div>`).join('') + '<div>print()</div>';
+  };
+  $('spBal').onclick = () => set(true); $('spLop').onclick = () => set(false);
+  set(true);
+})();
+
+/* ================= slide: rebuild ================= */
+(() => {
+  const p = new Player($('rbPl'), {code:CODE.balance, speed:1300, view:{SX:54, SY:44, padTop:28, root:false}});
+  const vals = [1,2,3,4,5,6,7];
+  const s0 = tree(vals);
+  const ids = vals.map(x => byVal(s0, x));
+  // target layout
+  const bal = blank(); const tid = {};
+  const bb = (lo, hi) => { if (lo > hi) return null; const m = lo + ((hi - lo + 1) >> 1); const id = ids[m]; tid[m] = id; bal.n[id] = {v:vals[m], l:bb(lo, m-1), r:bb(m+1, hi)}; return id; };
+  bal.root = bb(0, 6);
+  const gp = gridOf(bal).P;
+  const steps = []; const ROW = 4.4;
+  const push = (s, line, note, stack = []) => steps.push({s:clone(s), line, note, out:[], stack, cmp:''});
+  // step 0: chain
+  const c0 = clone(s0); c0.pos = {}; inorder(s0).forEach((k, i) => { c0.pos[k] = gridOf(s0).P[k]; });
+  push(c0, 1, 'These values were added in sorted order, so the tree is 7 levels tall');
+  // collect into row
+  const row = clone(s0); row.pos = {}; for (const k in row.n) { row.n[k].l = null; row.n[k].r = null; }
+  ids.forEach((k, i) => { row.pos[k] = {gx:i, gy:ROW}; row.hl[k] = 'path'; });
+  push(row, 3, 'collect visits the nodes in the same order as print, so values ends up sorted');
+  const cur = clone(row); for (const k in cur.hl) cur.hl[k] = '';
+  push(cur, 4, 'Now we build a new tree from the sorted list');
+  const build = (lo, hi, depth, parent, side, stack) => {
+    if (lo > hi) return;
+    const m = lo + ((hi - lo + 1) >> 1), id = ids[m];
+    const slice = vals.slice(lo, hi + 1);
+    const st = [`build([${slice.join(', ')}])`].concat(stack);
+    for (let k = lo; k <= hi; k++) if (cur.pos[ids[k]].gy === ROW) cur.hl[ids[k]] = 'path';
+    cur.hl[id] = 'cur';
+    push(cur, 16, `build([${slice.join(', ')}]): the middle value is ${vals[m]}, so it goes at the top of this side`, st);
+    for (const k in cur.hl) if (cur.hl[k] === 'path') cur.hl[k] = '';
+    cur.pos[id] = {...gp[id]}; cur.hl[id] = 'done';
+    if (parent) cur.n[parent][side] = id;
+    push(cur, parent ? (side === 'l' ? 18 : 19) : 17, parent ? `${vals[m]} becomes the ${side === 'l' ? 'left' : 'right'} child of ${cur.n[parent].v}` : `${vals[m]} becomes the new root`, st);
+    build(lo, m - 1, depth + 1, id, 'l', st);
+    build(m + 1, hi, depth + 1, id, 'r', st);
+  };
+  build(0, 6, 0, null, null, ['balance()']);
+  for (const k in cur.hl) cur.hl[k] = '';
+  push(cur, 4, 'self.root is set to the new root. The tree went from 7 levels to 3.');
+  p.load(steps);
+})();
+
+/* ================= slide: rotation ================= */
+(() => {
+  const v = new TreeView($('rotSvg'), {SX:64, SY:78});
+  let mode = 'a', rotated = false;
+  const A = () => tree([10,20,30]);
+  const B = () => tree([10,5,20,15,30]);
+  const rotL = s => { const x = s.root, y = s.n[x].r; s.n[x].r = s.n[y].l; s.n[y].l = x; s.root = y; return s; };
+  v.setBounds({cols:5, rows:3});
+  const render = () => {
+    let s = mode === 'a' ? A() : B();
+    const x = s.root, y = s.n[x].r, mid = s.n[y].l;
+    if (rotated) s = rotL(s);
+    s.hl = {[y]:'L'}; if (mid) s.hl[mid] = 'am';
+    v.show(s, true);
+    $('rotGo').textContent = rotated ? 'Undo' : 'Rotate';
+    if (mode === 'a') $('rotCap').innerHTML = rotated
+      ? '20 moved up and 10 moved down to its left. The tree is now 2 levels tall and the values are still in order.'
+      : '10, 20 and 30 are in a line, so the tree is 3 levels tall. 20 is the middle value, so it should be on top.';
+    else $('rotCap').innerHTML = rotated
+      ? '15 is now the right child of 10. It\'s bigger than 10 and smaller than 20, so it still follows the rule.'
+      : '20 has a left child, 15. When 20 moves up, 10 becomes its left child, so 15 needs somewhere else to go.';
+  };
+  $('rotA').onclick = () => { mode = 'a'; rotated = false; $('rotA').classList.add('sel'); $('rotB').classList.remove('sel'); render(); };
+  $('rotB').onclick = () => { mode = 'b'; rotated = false; $('rotB').classList.add('sel'); $('rotA').classList.remove('sel'); render(); };
+  $('rotGo').onclick = () => { rotated = !rotated; render(); };
+  render();
+})();
+
+/* ================= slide: AVL ================= */
+(() => {
+  const seq = [10,20,30,40,50,60,70];
+  const vA = new TreeView($('avA'), {SX:50, SY:40, padTop:30}), vB = new TreeView($('avB'), {SX:50, SY:40, padTop:30});
+  vA.setBounds({cols:7, rows:7}); vB.setBounds({cols:7, rows:7});
+  let k, sA, sB, busy = false, timer = 0;
+  const h = (s, id) => id == null ? 0 : 1 + Math.max(h(s, s.n[id].l), h(s, s.n[id].r));
+  function avl(s, v, id){
+    let note = '';
+    const rotL = x => { const y = s.n[x].r; s.n[x].r = s.n[y].l; s.n[y].l = x; return y; };
+    const rotR = x => { const y = s.n[x].l; s.n[x].l = s.n[y].r; s.n[y].r = x; return y; };
+    const ins = c => {
+      if (c == null) { s.n[id] = {v, l:null, r:null}; return id; }
+      const nd = s.n[c];
+      if (v < nd.v) nd.l = ins(nd.l); else nd.r = ins(nd.r);
+      const bal = h(s, nd.l) - h(s, nd.r);
+      if (bal > 1) { if (v > s.n[nd.l].v) nd.l = rotL(nd.l); if (!note) note = `${nd.v}'s left side is 2 levels taller than its right side, so the tree rotates there.`; return rotR(c); }
+      if (bal < -1) { if (v < s.n[nd.r].v) nd.r = rotR(nd.r); if (!note) note = `${nd.v}'s right side is 2 levels taller than its left side, so the tree rotates there.`; return rotL(c); }
+      return c;
+    };
+    s.root = ins(s.root);
+    return note;
+  }
+  const chips = () => { $('avChips').innerHTML = seq.map((x,i) => `<span class="chip${i < k ? ' seen' : i === k ? ' cur' : ''}">${x}</span>`).join(''); };
+  const stat = () => { $('avHA').textContent = heightOf(sA); $('avHB').textContent = heightOf(sB); chips(); $('avNext').disabled = k >= seq.length || busy; };
+  function reset(){ clearInterval(timer); timer = 0; $('avPlay').textContent = 'Play'; k = 1; sA = tree([seq[0]]); sB = tree([seq[0]]); vA.show(sA, false); vB.show(sB, false); $('avCap').textContent = 'Press Add next to add the values one at a time.'; busy = false; stat(); }
+  function next(){
+    if (busy || k >= seq.length) return;
+    const x = seq[k++], id = 'v' + x;
+    addRaw(sA, x, id); const a = clone(sA); a.hl = {}; vA.show(a, true);
+    const pre = clone(sB); addRaw(pre, x, id); pre.hl = {[id]:'found'};
+    const note = avl(sB, x, id);
+    vB.show(pre, true);
+    busy = true; stat();
+    if (note) {
+      $('avCap').textContent = `Added ${x}. ` + note;
+      setTimeout(() => { const t = clone(sB); t.hl = {[id]:'found'}; vB.show(t, true); }, 900);
+      setTimeout(() => { busy = false; stat(); }, 1500);
+    } else {
+      $('avCap').textContent = `Added ${x}. No node has a side that's 2 or more levels taller, so there's no rotation.`;
+      setTimeout(() => { busy = false; stat(); }, 600);
+    }
+    if (k >= seq.length) setTimeout(() => { $('avCap').textContent = `Both trees have the same 7 values. The regular tree is ${heightOf(sA)} levels tall and the AVL tree is ${heightOf(sB)}.`; }, 1600);
+  }
+  $('avNext').onclick = () => next();
+  $('avReset').onclick = reset;
+  $('avPlay').onclick = () => {
+    if (timer) { clearInterval(timer); timer = 0; $('avPlay').textContent = 'Play'; return; }
+    if (k >= seq.length) reset();
+    $('avPlay').textContent = 'Pause';
+    next();
+    timer = setInterval(() => { if (k >= seq.length) { clearInterval(timer); timer = 0; $('avPlay').textContent = 'Play'; return; } next(); }, 1900);
+  };
+  reset();
+})();
+
+/* ================= playground (Skulpt) ================= */
+const SK = ['https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js', 'https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt-stdlib.js'];
+let skP = null;
+function loadScript(src){ return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('Could not load Python')); document.head.appendChild(s); }); }
+function loadSk(){ if (!skP) skP = loadScript(SK[0]).then(() => loadScript(SK[1])).then(() => window.Sk).catch(e => { skP = null; throw e; }); return skP; }
+async function runPy(code){
+  const Sk = await loadSk();
+  let out = '';
+  Sk.configure({
+    output: t => { out += t; },
+    read: f => { if (Sk.builtinFiles === undefined || Sk.builtinFiles.files[f] === undefined) throw "File not found: '" + f + "'"; return Sk.builtinFiles.files[f]; },
+    __future__: Sk.python3, execLimit: 3000
+  });
+  try { await Sk.misceval.asyncToPromise(() => Sk.importMainWithBody('<stdin>', false, code, true)); return {out}; }
+  catch (e) { let msg = e.toString(); if (/TimeLimitError/.test(msg)) msg = 'Stopped after 3 seconds. A loop is probably never ending.'; return {out, err:msg}; }
+}
+function editorKeys(ta){
+  ta.addEventListener('keydown', e => {
+    if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); ta.setRangeText('    ', ta.selectionStart, ta.selectionEnd, 'end'); }
+    else if (e.key === 'Enter') {
+      const s = ta.selectionStart, before = ta.value.slice(0, s), line = before.slice(before.lastIndexOf('\n') + 1);
+      let ind = (line.match(/^ */) || [''])[0]; if (/:\s*$/.test(line)) ind += '    ';
+      e.preventDefault(); ta.setRangeText('\n' + ind, s, ta.selectionEnd, 'end');
+    }
+  });
+}
+(() => {
+  const ind = (code) => code.split('\n').map(l => l ? '    ' + l : l).join('\n');
+  const START = CODE.nodeT + '\n\n\n' + CODE.tree + '\n\n' + ind(CODE.add) + '\n\n' + ind(CODE.find) + '\n\n' + ind(CODE.print) + '\n\n' + ind(CODE.delete) + '\n';
+  const ed = $('pgEd'); ed.value = START; editorKeys(ed);
+  const v = new TreeView($('pgSvg'), {SX:50, SY:64, padTop:36});
+  const INIT = SAMPLE.map(x => `add(${x})`);
+  let ops = INIT.slice(), lastIds = {};
+  const out = $('pgOut');
+  const log = html => { out.innerHTML += (out.innerHTML ? '\n' : '') + html; out.scrollTop = out.scrollHeight; };
+  function fromNested(t){
+    const s = blank(), seen = {};
+    const mk = node => {
+      if (!node) return null;
+      const [val, l, r] = node;
+      seen[val] = (seen[val] || 0) + 1;
+      const id = 'pg_' + val + '_' + seen[val];
+      s.n[id] = {v:val, l:null, r:null};
+      s.n[id].l = mk(l); s.n[id].r = mk(r);
+      return id;
+    };
+    s.root = mk(t);
+    return s;
+  }
+  function jsTree(list){
+    const s = blank();
+    list.forEach(op => { const m = op.match(/^add\((-?\d+)\)$/); if (m) addRaw(s, +m[1], 'pg_' + m[1] + '_1'); });
+    return s;
+  }
+  function draw(s, anim){ v.setBounds(boundsOf([s], {minCols:7, minRows:4})); v.show(s, anim); }
+  draw(jsTree(ops), false);
+  const harness = last => `
+_t = Tree()
+${ops.slice(0, -1).map(o => '_t.' + o).join('\n')}
+print("@@BEGIN")
+_r = _t.${last}
+def _ser(n, d):
+    if n is None or d > 40:
+        return None
+    return [n.value, _ser(n.left, d + 1), _ser(n.right, d + 1)]
+print("@@TREE", _ser(_t.root, 0))
+`;
+  async function call(op){
+    ops.push(op);
+    $('pgStatus').textContent = window.Sk ? 'Running...' : 'Loading Python, this takes a moment the first time...';
+    let r;
+    try { r = await runPy(ed.value + '\n' + harness(op)); }
+    catch (e) { $('pgStatus').textContent = ''; ops.pop(); log(`<span class="err">${esc(e.message)}. Check your internet connection.</span>`); return; }
+    $('pgStatus').textContent = '';
+    log(`<b>tree.${esc(op)}</b>`);
+    const lines = r.out.split('\n'); const b = lines.indexOf('@@BEGIN');
+    let treeData;
+    lines.slice(b + 1).forEach(line => {
+      if (line.startsWith('@@TREE ')) { try { treeData = JSON.parse(line.slice(7).replace(/None/g, 'null').replace(/'/g, '"')); } catch (e) {} }
+      else if (line !== '') log(esc(line));
+    });
+    if (r.err) { log(`<span class="err">${esc(r.err)}</span>`); ops.pop(); return; }
+    if (treeData !== undefined) draw(fromNested(treeData), true);
+  }
+  const V = () => { const x = parseInt($('pgV').value, 10); return Number.isFinite(x) ? x : 5; };
+  [['add', () => `add(${V()})`], ['find', () => `find(${V()})`], ['delete', () => `delete(${V()})`], ['print', () => 'print()']].forEach(([name, f]) => {
+    const b = document.createElement('button'); b.textContent = name; if (name === 'add') b.className = 'pri';
+    b.onclick = async () => { b.disabled = true; await call(f()); b.disabled = false; };
+    $('pgBtns').appendChild(b);
+  });
+  $('pgResetTree').onclick = () => { ops = INIT.slice(); draw(jsTree(ops), true); log('<span class="mut">Tree reset to 8, 3, 10, 1, 6, 14</span>'); };
+  $('pgClear').onclick = () => { ops = []; draw(blank(), true); log('<span class="mut">Empty tree</span>'); };
+  $('pgResetCode').onclick = () => { ed.value = START; };
+})();
+
+/* ================= navigation ================= */
+const slides = [...document.querySelectorAll('.slide')];
+let cur = 0;
+function goSlide(i){
+  i = Math.max(0, Math.min(slides.length - 1, i));
+  PLAYERS.forEach(p => p.pause());
+  slides[cur].classList.remove('on');
+  cur = i;
+  slides[cur].classList.add('on');
+  $('stage').scrollTop = 0;
+  $('cnt').textContent = `${cur+1} / ${slides.length}`;
+  $('ttl').textContent = slides[cur].dataset.title;
+  $('prev').disabled = cur === 0;
+  $('next').disabled = cur === slides.length - 1;
+  $('prog').style.width = ((cur + 1) / slides.length * 100) + '%';
+  try { history.replaceState(null, '', '#' + (cur + 1)); } catch (e) {}
+}
+$('prev').onclick = () => goSlide(cur - 1);
+$('next').onclick = () => goSlide(cur + 1);
+document.addEventListener('keydown', e => {
+  if (e.target.closest('input, textarea, select')) return;
+  if (e.key === 'ArrowRight' || e.key === 'PageDown') { e.preventDefault(); goSlide(cur + 1); }
+  else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); goSlide(cur - 1); }
+});
+const start = parseInt((location.hash || '').slice(1), 10);
+goSlide(Number.isFinite(start) ? start - 1 : 0);
+})();
+</script>
+</body>
+</html>
