@@ -1,0 +1,1257 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Graphs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#ffffff; --ink:#16181d; --muted:#626a76; --line:#e3e5ea; --soft:#f5f6f8;
+  --hi:#1556d6; --hi-soft:#e7eefc; --am:#c2610c; --am-soft:#fdf0e2;
+  --err:#b3261e; --err-soft:#fbe9e7; --ok:#1e7f43; --ok-soft:#e5f4ea;
+  --sans:"Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html{font-size:clamp(15px, 0.85vw + 6px, 21px); height:100%}
+@media (max-height:820px) and (min-width:861px){html{font-size:clamp(14px, 0.7vw + 5px, 17px)}}
+body{background:var(--bg); color:var(--ink); font-family:var(--sans); height:100%; margin:0; -webkit-font-smoothing:antialiased}
+.deck{height:100%; display:flex; flex-direction:column}
+.stage{flex:1; overflow-y:auto; overflow-x:hidden; padding-inline:16px}
+.slide{display:none; max-width:1200px; margin:0 auto; padding-block:1.4rem 1.4rem}
+.slide.on{display:flex; flex-direction:column; gap:1.05rem; animation:fadein .35s ease}
+@keyframes fadein{from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none}}
+h1{font-size:2rem; line-height:1.15; margin:0; font-weight:800; letter-spacing:-.02em; text-wrap:balance}
+h1.big{font-size:3.4rem}
+.kicker{font-size:.8rem; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--hi); margin-bottom:-.9rem}
+p{margin:0; font-size:1.1rem; line-height:1.5; max-width:66ch}
+p.lead{font-size:1.3rem; color:#2c313a}
+ul.pts{margin:0; padding-left:1.15em; font-size:1.1rem; line-height:1.5; max-width:66ch; display:flex; flex-direction:column; gap:.25rem}
+ul.pts li::marker{color:var(--hi)}
+code{font-family:var(--mono); font-size:.86em; background:var(--soft); padding:.08em .35em; border-radius:4px; border:1px solid var(--line)}
+b.blue{color:var(--hi)} b.am{color:var(--am)} b.red{color:var(--err)} b.green{color:var(--ok)}
+.mut{color:var(--muted)} .small{font-size:.95rem}
+.cols{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:1.6rem 3rem; align-items:start}
+.cols > *{min-width:0}
+.stack{display:flex; flex-direction:column; gap:1rem; min-width:0}
+@media (max-width:860px){.cols{grid-template-columns:minmax(0,1fr)}}
+.lbl{font-size:.76rem; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:700; margin-bottom:.35rem}
+.card{border:1px solid var(--line); border-radius:12px; padding:1.1rem 1.25rem; background:var(--bg)}
+.card.soft{background:var(--soft); border-color:transparent}
+.big-num{font-size:2.6rem; font-weight:800; letter-spacing:-.02em; font-variant-numeric:tabular-nums; line-height:1.1}
+
+/* code */
+pre.code{font-family:var(--mono); font-size:.84rem; line-height:1.6; background:var(--soft); border:1px solid var(--line); border-radius:10px; padding:.8rem 0; margin:0; overflow-x:auto}
+pre.code .ln{display:block; padding:0 1.1rem 0 .9rem; white-space:pre; border-left:4px solid transparent; transition:background .2s}
+pre.code .ln.on{background:var(--hi-soft); border-left-color:var(--hi)}
+pre.code .ln .no{display:inline-block; width:1.7em; color:#b0b5bd; user-select:none}
+pre.code .kw{font-weight:700; color:#1d2b6b}
+pre.code .cm{color:var(--muted); font-style:italic}
+pre.code .st{color:#8a4b00}
+
+/* controls */
+*, *::before, *::after{touch-action:manipulation}
+button, .nav, .chip, svg.tree{-webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent}
+button{font:inherit; font-size:.92rem; font-weight:600; border:1.5px solid var(--ink); background:var(--bg); color:var(--ink); border-radius:8px; padding:.42em .95em; cursor:pointer; transition:background .15s, color .15s, transform .1s}
+button:hover:not(:disabled){background:var(--soft)}
+button:active:not(:disabled){transform:translateY(1px)}
+button.pri{background:var(--ink); color:#fff}
+button.pri:hover:not(:disabled){background:#333842}
+button.sel{background:var(--ink); color:#fff}
+button.sel:hover:not(:disabled){background:#333842}
+button:disabled{opacity:.35; cursor:default}
+button:focus-visible, input:focus-visible, textarea:focus-visible{outline:3px solid var(--hi); outline-offset:2px}
+.row{display:flex; flex-wrap:wrap; align-items:center; gap:.55rem}
+input[type=number]{font:inherit; font-size:.95rem; width:5em; padding:.38em .5em; border:1.5px solid var(--ink); border-radius:8px}
+input[type=range]{accent-color:var(--hi); width:min(22rem,100%)}
+
+/* tree svg */
+svg.tree{display:block; max-width:100%; height:auto; overflow:visible}
+.dia{overflow-x:auto; overflow-y:hidden; padding:4px 0}
+.nd circle.c{fill:#fff; stroke:var(--ink); stroke-width:2.2}
+.nd text.v{font:700 17px var(--sans); fill:var(--ink); dominant-baseline:central; text-anchor:middle}
+.nd circle.ring{fill:none; stroke:var(--hi); stroke-width:3; opacity:0}
+.nd.cur circle.ring{opacity:1}
+.nd.path circle.c{fill:var(--hi-soft); stroke:var(--hi)}
+.nd.wait circle.c{fill:var(--hi-soft); stroke:var(--hi); stroke-dasharray:4 3}
+.nd.found circle.c, .nd.done circle.c{fill:var(--hi); stroke:var(--hi)}
+.nd.found text.v, .nd.done text.v{fill:#fff}
+.nd.L circle.c{fill:var(--hi-soft); stroke:var(--hi)}
+.nd.R circle.c{fill:var(--am-soft); stroke:var(--am)}
+.nd.am circle.c{fill:var(--am); stroke:var(--am)} .nd.am text.v{fill:#fff}
+.nd.bad circle.c{fill:var(--err-soft); stroke:var(--err); stroke-width:3}
+.nd.bad text.v{fill:var(--err)}
+.nd.ok circle.c{fill:var(--ok); stroke:var(--ok)} .nd.ok text.v{fill:#fff}
+.nd.dim > *{opacity:.22}
+.nd.clk{cursor:pointer}
+.nd.clk:hover circle.c{stroke-width:3.5}
+.eg{stroke:#9aa1ab; stroke-width:2.2}
+.eg.p{stroke:var(--hi); stroke-width:3.2}
+.eg.slot{stroke-dasharray:5 4}
+.slotc{fill:none; stroke:#9aa1ab; stroke-width:2; stroke-dasharray:5 4}
+.slott{font:500 11px var(--mono); fill:var(--muted); text-anchor:middle; dominant-baseline:central}
+.tag{font:700 13px var(--mono); fill:var(--hi); paint-order:stroke; stroke:#fff; stroke-width:5px; stroke-linejoin:round}
+.tag.rt{fill:var(--muted); font-weight:600}
+.tag.am{fill:var(--am)}
+.side{font:600 12px var(--sans); fill:var(--muted); text-anchor:middle; paint-order:stroke; stroke:#fff; stroke-width:4px}
+
+/* step player */
+.pl{display:grid; grid-template-columns:minmax(0,max-content) minmax(0,1fr); gap:1.2rem 2.2rem; align-items:start}
+@media (max-width:900px){.pl{grid-template-columns:minmax(0,1fr)}}
+.pl-side{display:flex; flex-direction:column; gap:.8rem; min-width:0}
+.pl-ctl{display:flex; flex-wrap:wrap; gap:.45rem; align-items:center}
+.pl-count{font-size:.85rem; color:var(--muted); font-variant-numeric:tabular-nums; margin-left:.3rem}
+.pl-note{font-size:1.15rem; line-height:1.4; min-height:2.8em; font-weight:500; margin:0}
+.pl-cmp{font-family:var(--mono); font-size:1.05rem; color:var(--hi); font-weight:700}
+.pl-cmp:empty{display:none}
+.pl-main{display:flex; flex-wrap:wrap; gap:1rem 2rem; align-items:flex-start}
+.pl-main > .dia{flex:0 1 auto; min-width:0; max-width:100%}
+.pl-bot{display:flex; flex-direction:column; gap:1rem; flex:1 1 10rem; min-width:10rem}
+pre.code.long{font-size:.7rem; line-height:1.36}
+.outbox{font-family:var(--mono); font-size:.92rem; margin:0; padding:.55rem .8rem; border:1px solid var(--line); border-radius:8px; min-height:2.4em; white-space:pre-wrap; background:#fff}
+.outbox .new{color:var(--hi); font-weight:700}
+.cstack{display:flex; flex-direction:column; gap:3px; font-family:var(--mono); font-size:.82rem}
+.cstack div{border:1px solid var(--line); border-radius:6px; padding:.15rem .5rem; background:#fff; color:var(--muted)}
+.cstack div:first-child{border-color:var(--hi); background:var(--hi-soft); color:var(--ink); font-weight:700}
+.scen{display:flex; flex-wrap:wrap; gap:.45rem}
+
+/* chips (lists) */
+.chips{display:flex; flex-wrap:wrap; gap:.35rem; align-items:center}
+.chip{min-width:2.35rem; height:2.35rem; display:inline-flex; align-items:center; justify-content:center; border:2px solid var(--ink); border-radius:8px; font-weight:700; font-variant-numeric:tabular-nums; background:#fff; transition:all .25s; padding:0 .3rem; position:relative}
+.chip.cur{border-color:var(--hi); background:var(--hi); color:#fff; transform:translateY(-3px)}
+.chip.seen{background:var(--hi-soft); border-color:var(--hi); color:var(--hi)}
+.chip.dim{opacity:.22}
+.chip.ok{background:var(--ok); border-color:var(--ok); color:#fff}
+.chip.am{background:var(--am-soft); border-color:var(--am); color:var(--am)}
+.chip.bad{background:var(--err-soft); border-color:var(--err); color:var(--err)}
+.chip .mk{position:absolute; bottom:calc(100% + 4px); left:50%; transform:translateX(-50%); font:700 .7rem/1.25 var(--mono); color:var(--hi); white-space:nowrap; display:flex; flex-direction:column; align-items:center}
+.arr{color:#9aa1ab; font-weight:700}
+.chips.ll{gap:.2rem}
+
+/* tables */
+.tw{overflow-x:auto}
+table.t{border-collapse:collapse; font-size:1.05rem}
+table.t th, table.t td{border-bottom:1px solid var(--line); padding:.6rem 1rem; text-align:left; vertical-align:top}
+table.t th{font-size:.76rem; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:700}
+table.t td:last-child{min-width:14rem}
+#bsChips{flex-wrap:nowrap; overflow-x:auto; padding-top:2.7rem; margin-top:0 !important}
+table.t td.o{font-family:var(--mono); font-weight:700; white-space:nowrap}
+table.t td.o.g{color:var(--hi)} table.t td.o.b{color:var(--err)}
+
+/* misc */
+.howto{display:grid; grid-template-columns:max-content minmax(0,1fr); gap:.8rem 1rem; align-items:center; font-size:1.1rem; max-width:62ch}
+.howto > div{display:contents}
+.key{display:inline-block; min-width:2.2em; text-align:center; border:1.5px solid var(--ink); border-radius:6px; padding:.12em .55em; font-size:1rem; font-weight:700}
+.key.pri{background:var(--ink); color:#fff}
+.msg{font-size:1.15rem; font-weight:600; min-height:1.6em}
+.msg.bad{color:var(--err)} .msg.good{color:var(--ok)}
+.trio{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:1rem}
+@media (max-width:860px){.trio{grid-template-columns:minmax(0,1fr)}}
+.trio .card h3{margin:0 0 .3rem; font-size:1.08rem}
+.trio .card p{font-size:1rem}
+.legend{display:flex; flex-wrap:wrap; gap:1rem; font-size:.95rem; color:var(--muted)}
+.legend span::before{content:""; display:inline-block; width:.9em; height:.9em; border-radius:50%; margin-right:.4em; vertical-align:-.1em; border:2px solid var(--ink)}
+.legend .l-L::before{background:var(--hi-soft); border-color:var(--hi)}
+.legend .l-R::before{background:var(--am-soft); border-color:var(--am)}
+.legend .l-am::before{background:var(--am); border-color:var(--am)}
+.legend .l-done::before{background:var(--hi); border-color:var(--hi)}
+.legend .l-wait::before{background:var(--hi-soft); border-color:var(--hi); border-style:dashed}
+.legend .l-cur::before{box-shadow:0 0 0 2px #fff, 0 0 0 4px var(--hi)}
+.pair{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:1.5rem 2.5rem}
+@media (max-width:860px){.pair{grid-template-columns:minmax(0,1fr)}}
+.stat{font-size:1.05rem}
+.stat b{font-variant-numeric:tabular-nums}
+.levels{display:flex; flex-direction:column; gap:3px; font-family:var(--mono); font-size:.82rem}
+.levels .lv{display:grid; grid-template-columns:5.5em minmax(0,1fr) 9em; align-items:center; gap:.6rem}
+.levels .bar{height:12px; background:var(--hi); border-radius:3px; min-width:3px; transition:width .3s}
+.memnode{display:inline-grid; grid-template-columns:repeat(3, auto); border:2px solid var(--ink); border-radius:8px; overflow:hidden; font-family:var(--mono); font-size:.95rem}
+.memnode span{padding:.45rem .8rem; border-right:2px solid var(--ink)}
+.memnode span:last-child{border-right:0}
+.memnode span.v{font-weight:700; background:var(--hi-soft)}
+
+/* editor */
+textarea.ed{width:100%; font-family:var(--mono); font-size:.8rem; line-height:1.5; border:1.5px solid var(--ink); border-radius:10px; padding:.7rem .9rem; white-space:pre; overflow:auto; resize:vertical; tab-size:4; background:#fff; color:var(--ink)}
+.pgcols{grid-template-columns:minmax(0,1fr) minmax(0,1.1fr)}
+#pgEd{height:56vh}
+@media (max-width:860px){.pgcols{grid-template-columns:minmax(0,1fr)} #pgEd{height:42vh}}
+.err{color:var(--err)}
+
+/* nav */
+.nav{border-top:1px solid var(--line); display:flex; align-items:center; gap:.6rem; padding:.45rem 16px calc(.45rem + env(safe-area-inset-bottom, 0px)); position:relative; background:#fff}
+.nav .prog{position:absolute; left:0; top:-1px; height:2px; background:var(--hi); transition:width .3s}
+.nav .cnt{font-variant-numeric:tabular-nums; font-size:.92rem; min-width:4.5em; text-align:center}
+.nav button{font-size:1.15rem; line-height:1; padding:.3em .85em}
+.nav .ttl{flex:1; font-size:.85rem; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+@media (max-width:600px){
+  svg.tree{max-width:none; width:max(min(100%, calc(var(--w) * 1px)), calc(var(--w) * .62px)) !important}
+  h1{font-size:1.75rem} h1.big{font-size:2.4rem}
+  .nav{justify-content:space-between} .nav .ttl{display:none}
+  .nav button{font-size:22px; padding:4px 22px; min-height:40px}
+}
+@media (prefers-reduced-motion: reduce){.slide.on{animation:none}}
+
+/* graph svg */
+svg.graph{display:block; max-width:100%; height:auto; overflow:visible}
+svg.graph .nd, svg.graph .eg, svg.graph .tag, svg.graph .rowl{transition:opacity .35s}
+svg.graph .nd circle.c{transition:fill .25s, stroke .25s}
+svg.graph .eg{transition:opacity .35s, stroke .25s, stroke-width .25s}
+svg.graph .off{opacity:0; pointer-events:none}
+.eg.u{stroke:#8fb0ee; stroke-width:3}
+.eg.chk{stroke:var(--am); stroke-width:3.2}
+.eg.dim{opacity:.25}
+.nd.chk circle.ring{opacity:1; stroke:var(--am); stroke-dasharray:5 4}
+.nd.done.wait circle.c{fill:var(--hi-soft); stroke:var(--hi); stroke-dasharray:4 3}
+.nd.done.wait text.v{fill:var(--ink)}
+.nd text.sub{font:600 12px var(--sans); fill:var(--muted); text-anchor:middle; paint-order:stroke; stroke:#fff; stroke-width:4px}
+.rowl{font:600 12px var(--sans); fill:var(--muted)}
+.legend .l-chk::before{background:#fff; border-color:var(--am); border-style:dashed}
+
+/* panels */
+.chips.sm .chip{min-width:1.9rem; height:1.9rem; font-size:.9rem; border-width:1.5px}
+.chips.sm{min-height:1.9rem}
+.adj{align-self:flex-start; font-family:var(--mono); font-size:.92rem; display:flex; flex-direction:column; gap:3px}
+.adj div{border:1px solid var(--line); border-radius:6px; padding:.2rem .6rem; background:#fff; transition:background .2s, border-color .2s; white-space:nowrap}
+.adj div.on{border-color:var(--hi); background:var(--hi-soft)}
+.adj b{color:var(--hi)}
+.adj.clk div{cursor:pointer}
+.pl-bot .lbl{margin-bottom:.3rem}
+.cstack .more{border-style:dashed; text-align:center}
+.cstack .boom{border-color:var(--err) !important; background:var(--err-soft) !important; color:var(--err) !important; font-weight:700}
+input[type=text]{font:inherit; font-size:.95rem; width:4em; padding:.38em .5em; border:1.5px solid var(--ink); border-radius:8px; text-transform:uppercase}
+.trio .card .dia{margin-top:.6rem}
+#pgEd{height:60vh}
+</style>
+</head>
+<body>
+<div class="deck">
+<main class="stage" id="stage">
+
+<!-- 1 -->
+<section class="slide" data-title="Start">
+  <h1 class="big">Graphs</h1>
+  <div class="dia"><svg id="titleG"></svg></div>
+  <div class="howto">
+    <div><span><span class="key">&larr;</span> <span class="key">&rarr;</span></span><span>Move between slides</span></div>
+    <div><span class="key pri">Step</span><span>Run the code one line at a time</span></div>
+    <div><span class="key">Play</span><span>Run the code on its own, press again to pause</span></div>
+  </div>
+</section>
+
+<!-- 2 -->
+<section class="slide" data-title="Trees and graphs">
+  <h1>From trees to graphs</h1>
+  <p>A tree node has two pointers, <code>left</code> and <code>right</code>, and we reach every node by starting at the root. A graph has fewer rules. A node can be connected to any number of other nodes, there is no root, and the connections can form a loop.</p>
+  <div class="row"><button id="mTree" class="sel">Tree</button><button id="mGraph">Graph</button></div>
+  <div class="dia"><svg id="morphG"></svg></div>
+  <p id="morphCap"></p>
+</section>
+
+<!-- 3 -->
+<section class="slide" data-title="Nodes and edges">
+  <h1>Nodes and edges</h1>
+  <p>A graph is made of nodes and edges. An edge connects two nodes, and two nodes that share an edge are called neighbors. Click any node to see its neighbors.</p>
+  <div class="dia"><svg id="nbG"></svg></div>
+  <p id="nbCap"></p>
+</section>
+
+<!-- 4 -->
+<section class="slide" data-title="Uses">
+  <h1>What graphs are used for</h1>
+  <p>Anything made of things and the connections between them can be stored as a graph</p>
+  <div class="trio">
+    <div class="card"><h3>Maps</h3><p>Cities are nodes and roads are edges</p><div class="dia"><svg id="useMap"></svg></div></div>
+    <div class="card"><h3>Friends</h3><p>People are nodes and friendships are edges</p><div class="dia"><svg id="useFr"></svg></div></div>
+    <div class="card"><h3>Websites</h3><p>Pages are nodes and links are edges</p><div class="dia"><svg id="useWeb"></svg></div></div>
+  </div>
+</section>
+
+<!-- 5 -->
+<section class="slide" data-title="Directed">
+  <h1>Directed and undirected</h1>
+  <p>In an undirected graph an edge goes both ways. If Ana is friends with Ben, then Ben is friends with Ana. In a directed graph an edge only goes one way, like following someone. Ana can follow Ben without Ben following her back.</p>
+  <div class="row"><button id="dirU" class="sel">Undirected: friends</button><button id="dirD">Directed: follows</button></div>
+  <div class="dia"><svg id="dirG"></svg></div>
+  <p id="dirCap"></p>
+  <p class="mut">The graphs in the rest of these slides are undirected</p>
+</section>
+
+<!-- 6 -->
+<section class="slide" data-title="Storing a graph">
+  <h1>Storing a graph</h1>
+  <p>We need to store which nodes are connected. We use a dictionary where each node is a key and its value is a list of its neighbors. This is called an adjacency list. Click a node to see its list.</p>
+  <div class="cols">
+    <div class="dia"><svg id="adjG"></svg></div>
+    <div class="stack" style="gap:.4rem"><div class="lbl" style="margin:0">The dictionary</div><div class="adj clk" id="adjT"></div></div>
+  </div>
+  <p id="adjCap"></p>
+</section>
+
+<!-- 7 -->
+<section class="slide" data-title="Graph class">
+  <h1>The Graph class</h1>
+  <div class="cols">
+    <div class="stack">
+      <p>A Tree only remembered its root. A Graph has no root, so it remembers every node in a dictionary called <code>neighbors</code>. A new graph has no nodes yet, so the dictionary starts empty.</p>
+      <p><code>add_node</code> gives a new node an empty list. <code>add_edge</code> adds each node to the other one's list, because the edge goes both ways.</p>
+      <p>A node here is only a name like <code>"A"</code>, so we don't need a Node class</p>
+    </div>
+    <div class="stack">
+      <pre class="code" id="cGraph"></pre>
+    </div>
+  </div>
+</section>
+
+<!-- 8 -->
+<section class="slide" data-title="Building a graph">
+  <h1>Building a graph: code</h1>
+  <p>Each call to <code>add_edge</code> makes sure both nodes are in the dictionary, then adds each one to the other's list. Step through four calls and watch the dictionary and the drawing change together.</p>
+  <div id="buildPl"></div>
+</section>
+
+<!-- 9 -->
+<section class="slide" data-title="Loops">
+  <h1>Visiting every node</h1>
+  <p>In a tree we visited every node by going left and right from the root, and we never came back to a node we had already seen. A graph can have loops, so following edges can bring us back to where we started. Step through this code to see what goes wrong.</p>
+  <div id="loopPl"></div>
+</section>
+
+<!-- 10 -->
+<section class="slide" data-title="Visited">
+  <h1>Remembering where we've been</h1>
+  <div class="cols">
+    <div class="stack">
+      <p>To fix this we remember every node we've visited, and we only go to a neighbor if we haven't visited it yet.</p>
+      <p>We keep the visited nodes in a set. A set is like a list with no duplicates, but checking if something is in a set takes O(1) and checking a list takes O(n).</p>
+      <p>There are two common ways to visit every node, depth-first search and breadth-first search. Both use <code>visited</code>, and the only difference between them is the order they visit the nodes in.</p>
+    </div>
+    <div class="stack">
+      <div class="lbl">Using a set</div>
+      <pre class="code" id="cSet"></pre>
+    </div>
+  </div>
+</section>
+
+<!-- 11 -->
+<section class="slide" data-title="DFS">
+  <h1>Depth-first search</h1>
+  <p>Depth-first search, or DFS, follows one path as far as it can before trying another. From each node it moves to the first neighbor it hasn't visited. When a node has no unvisited neighbors left, it goes back one node and tries the next neighbor there.</p>
+  <div class="row"><button id="diBack">Back</button><button class="pri" id="diStep">Step</button></div>
+  <div class="dia"><svg id="diG"></svg></div>
+  <div class="stack" style="gap:.4rem"><div class="lbl" style="margin:0">Order visited</div><div class="chips" id="diOut" style="min-height:2.4rem"></div></div>
+  <p id="diCap"></p>
+</section>
+
+<!-- 12 -->
+<section class="slide" data-title="DFS: code">
+  <h1>Depth-first search: code</h1>
+  <p><code>dfs_from</code> adds the node to <code>visited</code>, prints it, then calls itself on each neighbor that isn't in <code>visited</code>. We don't write any code for going back. When a call finishes we return to the call that made it, and that call checks its next neighbor.</p>
+  <div class="row" style="justify-content:space-between; gap:.6rem 1rem"><div class="scen" id="dfsSc"></div><div class="legend" style="font-size:.85rem"><span class="l-cur">current call</span><span class="l-done">visited</span><span class="l-chk">neighbor being checked</span></div></div>
+  <div id="dfsPl"></div>
+</section>
+
+<!-- 13 -->
+<section class="slide" data-title="DFS and trees">
+  <h1>DFS and printing a tree</h1>
+  <p>Printing a tree was a depth-first search. <code>print_from</code> called itself on <code>node.left</code> and <code>node.right</code>, and <code>dfs_from</code> calls itself on every neighbor. A tree has no loops, which is why it didn't need <code>visited</code>.</p>
+  <div class="cols">
+    <div class="stack">
+      <div class="lbl">Tree</div>
+      <pre class="code" id="cCmpT"></pre>
+    </div>
+    <div class="stack">
+      <div class="lbl">Graph</div>
+      <pre class="code" id="cCmpG"></pre>
+    </div>
+  </div>
+</section>
+
+<!-- 14 -->
+<section class="slide" data-title="BFS">
+  <h1>Breadth-first search</h1>
+  <p>Breadth-first search, or BFS, visits the nodes closest to the start first. It visits the start, then every neighbor of the start, then every node that is two edges away, and so on. Each of these groups is called a level.</p>
+  <div class="row"><button id="biBack">Back</button><button class="pri" id="biStep">Step</button></div>
+  <div class="dia"><svg id="biG"></svg></div>
+  <div class="stack" style="gap:.4rem"><div class="lbl" style="margin:0">Order visited</div><div class="chips" id="biOut" style="min-height:2.4rem"></div></div>
+  <p id="biCap"></p>
+</section>
+
+<!-- 15 -->
+<section class="slide" data-title="BFS: code">
+  <h1>Breadth-first search: code</h1>
+  <p>BFS uses a queue. We remove the node at the front, print it, and add its unvisited neighbors to the back. Nodes that were added first come out first, so a whole level is printed before the next one starts. A neighbor goes into <code>visited</code> as soon as it's added to the queue so it can't be added twice.</p>
+  <div class="row" style="justify-content:space-between; gap:.6rem 1rem"><div class="scen" id="bfsSc"></div><div class="legend" style="font-size:.85rem"><span class="l-cur">current node</span><span class="l-wait">waiting in the queue</span><span class="l-done">printed</span></div></div>
+  <div id="bfsPl"></div>
+  <p class="mut small">The queue is a list to keep the code short. <code>pop(0)</code> is O(n), so our linked list queue would be faster.</p>
+</section>
+
+<!-- 16 -->
+<section class="slide" data-title="DFS vs BFS">
+  <h1>DFS vs BFS</h1>
+  <p>Both searches visit every node once, but in a different order. DFS follows one path as far as it goes and BFS spreads out one level at a time. Click a node to start from there.</p>
+  <div class="row"><button id="vsBack">Back</button><button class="pri" id="vsStep">Step</button><button id="vsPlay">Play</button></div>
+  <div class="pair">
+    <div class="stack">
+      <div class="lbl">Depth-first search</div>
+      <div class="dia"><svg id="vsA"></svg></div>
+      <div class="chips sm" id="vsOA"></div>
+    </div>
+    <div class="stack">
+      <div class="lbl">Breadth-first search</div>
+      <div class="dia"><svg id="vsB"></svg></div>
+      <div class="chips sm" id="vsOB"></div>
+    </div>
+  </div>
+</section>
+
+<!-- 17 -->
+<section class="slide" data-title="Stack and queue">
+  <h1>A stack and a queue</h1>
+  <p>The order comes from where each search keeps the nodes it still has to come back to. DFS keeps them on the call stack, and a stack gives back the newest item first, so DFS always continues from the node it reached last. BFS keeps them in a queue, and a queue gives back the oldest item first, so BFS finishes the closer nodes before it moves on.</p>
+  <div class="tw"><table class="t">
+    <thead><tr><th></th><th>DFS</th><th>BFS</th></tr></thead>
+    <tbody>
+      <tr><td>Keeps track with</td><td>The call stack</td><td>A queue</td></tr>
+      <tr><td>Order</td><td>One path as far as it goes, then back</td><td>One level at a time</td></tr>
+      <tr><td>Useful for</td><td>Checking if one node can be reached from another</td><td>Finding the shortest path between two nodes</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- 18 -->
+<section class="slide" data-title="Not connected">
+  <h1>Graphs in more than one piece</h1>
+  <p>A graph doesn't have to be connected. If we start at A in this graph, DFS and BFS never reach X or Y because no edge leads to them. To visit every node we go through every key in the dictionary and start a search from each one that hasn't been visited.</p>
+  <div id="allPl"></div>
+</section>
+
+<!-- 19 -->
+<section class="slide" data-title="Time complexity">
+  <h1>Time complexity</h1>
+  <p><code>n</code> is the number of nodes and <code>e</code> is the number of edges. Two graphs with the same number of nodes can have very different numbers of edges, so we need both to describe how long a search takes.</p>
+  <div class="tw"><table class="t">
+    <thead><tr><th>Method</th><th>Time</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td><code>add_node</code></td><td class="o">O(1)</td><td>Adds one key to the dictionary</td></tr>
+      <tr><td><code>add_edge</code></td><td class="o">O(1)</td><td>Adds one item to the end of two lists</td></tr>
+      <tr><td><code>dfs</code></td><td class="o">O(n + e)</td><td>Visits every node once, and checks every edge twice, once from each end</td></tr>
+      <tr><td><code>bfs</code></td><td class="o">O(n + e)</td><td>Does the same work as dfs in a different order</td></tr>
+    </tbody>
+  </table></div>
+  <p>Our graph has 7 nodes and 8 edges. Both searches printed 7 nodes and checked 16 neighbors, 2 for each edge.</p>
+</section>
+
+<!-- 20 -->
+<section class="slide" data-title="Space complexity">
+  <h1>Space complexity</h1>
+  <p>The graph takes O(n + e) space because the dictionary has one key for every node and every edge is stored in two lists. <code>visited</code> can end up holding every node, so it takes O(n) in both searches.</p>
+  <p>DFS also needs the call stack and BFS needs the queue. How big they get depends on the shape of the graph, but neither one can hold more than n nodes, so both are O(n).</p>
+  <div class="row"><button id="spLine" class="sel">Graph in a line</button><button id="spStar">Graph in a star</button></div>
+  <div class="trio">
+    <div class="dia"><svg id="spG"></svg></div>
+    <div class="stack" style="gap:.4rem"><div class="lbl" style="margin:0">Call stack at the deepest point of dfs</div><div class="cstack" id="spStack"></div></div>
+    <div class="stack" style="gap:.4rem"><div class="lbl" style="margin:0">Queue at its longest in bfs</div><div class="chips sm" id="spQ"></div><p class="small mut" id="spCap"></p></div>
+  </div>
+</section>
+
+<!-- 21 -->
+<section class="slide" data-title="Summary">
+  <h1>Summary</h1>
+  <div class="cols">
+    <ul class="pts">
+      <li>A graph is nodes connected by edges, with no root and no rule about where a node goes</li>
+      <li>We store it as a dictionary where each node has a list of its neighbors</li>
+      <li>A graph can have loops, so DFS and BFS keep a <code>visited</code> set and never go to a node twice</li>
+      <li>DFS follows one path as far as it can, then goes back. It uses recursion, so the call stack remembers the way back.</li>
+      <li>BFS uses a queue to visit one level at a time, so it reaches every node using the fewest edges</li>
+      <li>If the graph isn't connected, one search only reaches the nodes in the same piece as the start</li>
+    </ul>
+    <div class="tw"><table class="t">
+      <thead><tr><th></th><th>Time</th><th>Extra space</th></tr></thead>
+      <tbody>
+        <tr><td>add_node</td><td class="o">O(1)</td><td class="o">O(1)</td></tr>
+        <tr><td>add_edge</td><td class="o">O(1)</td><td class="o">O(1)</td></tr>
+        <tr><td>dfs</td><td class="o">O(n + e)</td><td class="o">O(n)</td></tr>
+        <tr><td>bfs</td><td class="o">O(n + e)</td><td class="o">O(n)</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<!-- 22 -->
+<section class="slide" data-title="Playground">
+  <h1>Playground</h1>
+  <p>This is the full Graph class from these slides. Change anything you want and use the buttons to call the methods. The graph is drawn again after each call so you can see what your code did.</p>
+  <div class="cols pgcols">
+    <div class="stack" style="gap:.5rem">
+      <textarea class="ed" id="pgEd" spellcheck="false" aria-label="Graph code"></textarea>
+      <div class="row"><button id="pgResetCode">Reset code</button></div>
+    </div>
+    <div class="stack">
+      <div class="row"><label for="pgA">a</label><input type="text" id="pgA" value="G" maxlength="3"><label for="pgB">b</label><input type="text" id="pgB" value="H" maxlength="3"></div>
+      <div class="row" id="pgBtns"></div>
+      <div class="row"><button id="pgResetG">Reset graph</button><button id="pgClear">Empty graph</button><span class="mut small" id="pgStatus"></span></div>
+      <div><div class="lbl">Console</div><pre class="outbox" id="pgOut" style="max-height:22vh; overflow:auto"></pre></div>
+      <div class="dia"><svg id="pgSvg"></svg></div>
+    </div>
+  </div>
+</section>
+
+</main>
+<nav class="nav" aria-label="Slides">
+  <div class="prog" id="prog"></div>
+  <span class="ttl" id="ttl"></span>
+  <button id="prev" aria-label="Previous slide">&lsaquo;</button>
+  <span class="cnt" id="cnt"></span>
+  <button id="next" aria-label="Next slide">&rsaquo;</button>
+</nav>
+</div>
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const clone = o => JSON.parse(JSON.stringify(o));
+let UID = 0;
+const list = a => a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1];
+
+/* ================= code display ================= */
+const KW = /\b(def|class|while|if|else|elif|return|for|in|not|is|None|True|False|and|or|self)\b/g;
+function hlLine(line){
+  let code = line, cm = '';
+  const h = line.indexOf('#');
+  if (h >= 0 && (line.slice(0,h).split('"').length % 2 === 1)) { code = line.slice(0,h); cm = line.slice(h); }
+  const parts = code.split(/("[^"]*")/);
+  const out = parts.map((p,i) => i%2 ? '<span class="st">'+esc(p)+'</span>' : esc(p).replace(KW, m => m === 'self' ? m : '<span class="kw">'+m+'</span>')).join('');
+  return out + (cm ? '<span class="cm">'+esc(cm)+'</span>' : '');
+}
+function renderCode(pre, text, nums=true){
+  pre.innerHTML = text.split('\n').map((l,i) =>
+    '<span class="ln">' + (nums ? '<span class="no">'+(i+1)+'</span>' : '') + (hlLine(l) || ' ') + '</span>').join('');
+}
+
+/* ================= graph view ================= */
+// def = {nodes:{id:[gx,gy]}, edges:[[a,b,both?]], labels?, sub?, tagAt?, rows?}
+// st  = {hl:{id:cls}, ehl:{key:cls}, tags:{id:text}, off:{id|key:true}, dir:bool, rows:n}
+class GraphView {
+  constructor(svg, def, o = {}){
+    this.svg = svg; this.o = Object.assign({SX:92, SY:80, r:23, pad:16, padTop:34, padBot:14}, o);
+    svg.classList.add('graph');
+    if (o.onClick) svg.addEventListener('click', e => { const t = e.target.closest('[data-id]'); if (t) o.onClick(t.dataset.id); });
+    this.build(def);
+  }
+  build(def){
+    this.def = def;
+    const {SX, SY, r, pad, padTop, padBot} = this.o;
+    const left = pad + (def.rows ? 62 : 0);
+    let mx = 0, my = 0;
+    for (const id in def.nodes) { mx = Math.max(mx, def.nodes[id][0]); my = Math.max(my, def.nodes[id][1]); }
+    const P = this.P = {};
+    for (const id in def.nodes) P[id] = {x:left + r + def.nodes[id][0]*SX, y:padTop + r + def.nodes[id][1]*SY};
+    this.w = left + pad + mx*SX + 2*r; this.h = padTop + my*SY + 2*r + padBot + (def.sub ? 18 : 0);
+    this.svg.setAttribute('viewBox', `0 0 ${this.w} ${this.h}`);
+    this.svg.style.width = this.w + 'px';
+    const mid = 'ar' + (++UID);
+    let h = `<defs><marker id="${mid}" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#6f7783"/></marker></defs>`;
+    this.mid = mid;
+    for (const [a, b] of def.edges) {
+      const A = P[a], B = P[b], dx = B.x - A.x, dy = B.y - A.y, L = Math.hypot(dx, dy) || 1, g = r + 1;
+      h += `<line class="eg" data-k="${a}-${b}" x1="${A.x + dx/L*g}" y1="${A.y + dy/L*g}" x2="${B.x - dx/L*g}" y2="${B.y - dy/L*g}"/>`;
+    }
+    (def.rows || []).forEach((t, i) => { h += `<text class="rowl" data-row="${i}" x="${pad}" y="${padTop + r + i*SY + 4}">${esc(t)}</text>`; });
+    for (const id in def.nodes) {
+      const lab = def.labels ? def.labels[id] : id, p = P[id];
+      h += `<g class="nd" data-id="${id}" transform="translate(${p.x},${p.y})"><circle class="ring" r="${r+6}"/><circle class="c" r="${r}"/>`
+        + `<text class="v" style="font-size:${String(lab).length > 2 ? 13 : 17}px">${esc(lab)}</text>`
+        + (def.sub ? `<text class="sub" y="${def.subUp && def.subUp[id] ? -r - 7 : r + 16}">${esc(def.sub[id])}</text>` : '') + `</g>`;
+    }
+    for (const id in def.nodes) {
+      const at = (def.tagAt && def.tagAt[id]) || 't', p = P[id], g = r + 12;
+      const c = at === 't' ? [p.x, p.y - g, 'middle'] : at === 'b' ? [p.x, p.y + g + 11, 'middle'] : at === 'l' ? [p.x - g, p.y + 5, 'end'] : [p.x + g, p.y + 5, 'start'];
+      h += `<text class="tag" data-tag="${id}" x="${c[0]}" y="${c[1]}" text-anchor="${c[2]}"></text>`;
+    }
+    this.svg.innerHTML = h;
+    this.N = {}; this.T = {}; this.E = {};
+    this.svg.querySelectorAll('.nd').forEach(e => { this.N[e.dataset.id] = e; });
+    this.svg.querySelectorAll('.tag').forEach(e => { this.T[e.dataset.tag] = e; });
+    this.svg.querySelectorAll('.eg').forEach(e => { this.E[e.dataset.k] = e; });
+    this.R = [...this.svg.querySelectorAll('.rowl')];
+    this.both = {}; def.edges.forEach(e => { if (e[2]) this.both[e[0] + '-' + e[1]] = true; });
+  }
+  ek(a, b){ return this.E[a + '-' + b] ? a + '-' + b : b + '-' + a; }
+  show(st = {}){
+    const hl = st.hl || {}, ehl = st.ehl || {}, tags = st.tags || {}, off = st.off || {};
+    const clk = this.o.onClick ? ' clk' : '';
+    for (const id in this.N) {
+      this.N[id].setAttribute('class', 'nd ' + (hl[id] || '') + clk + (off[id] ? ' off' : ''));
+      const t = tags[id] || '';
+      this.T[id].textContent = t.replace(/^!/, '');
+      this.T[id].setAttribute('class', 'tag' + (t[0] === '!' ? ' am' : '') + (t === 'root' ? ' rt' : ''));
+    }
+    for (const k in this.E) {
+      const e = this.E[k];
+      e.setAttribute('class', 'eg ' + (ehl[k] || '') + (off[k] ? ' off' : ''));
+      if (st.dir) { e.setAttribute('marker-end', `url(#${this.mid})`); if (this.both[k]) e.setAttribute('marker-start', `url(#${this.mid})`); else e.removeAttribute('marker-start'); }
+      else { e.removeAttribute('marker-end'); e.removeAttribute('marker-start'); }
+    }
+    this.R.forEach((e, i) => e.setAttribute('class', 'rowl' + (st.rows != null && i >= st.rows ? ' off' : '')));
+  }
+}
+function adjOf(def){
+  const adj = {};
+  for (const id in def.nodes) adj[id] = [];
+  for (const [a, b] of def.edges) { adj[a].push(b); adj[b].push(a); }
+  return adj;
+}
+const ekOf = (def, a, b) => def.edges.some(e => e[0] === a && e[1] === b) ? a + '-' + b : b + '-' + a;
+
+const MAIN = {
+  nodes:{A:[1.5,0], B:[0.5,1], C:[2.5,1], D:[0,2], E:[1.5,2], F:[3,2], G:[2.25,3]},
+  edges:[['A','B'],['A','C'],['B','D'],['B','E'],['C','E'],['C','F'],['E','G'],['F','G']],
+  tagAt:{A:'t', B:'l', C:'r', D:'b', E:'b', F:'b', G:'b'}
+};
+const ADJ = adjOf(MAIN);
+
+/* ================= code ================= */
+const CODE = {
+graph:
+`class Graph:
+    def __init__(self):
+        self.neighbors = {}
+
+    def add_node(self, node):
+        if node not in self.neighbors:
+            self.neighbors[node] = []
+
+    def add_edge(self, a, b):
+        self.add_node(a)
+        self.add_node(b)
+        self.neighbors[a].append(b)
+        self.neighbors[b].append(a)`,
+print:
+`def print(self):
+    for node in self.neighbors:
+        print(node, self.neighbors[node])`,
+naive:
+`def visit(self, node):
+    print(node)
+    for neighbor in self.neighbors[node]:
+        self.visit(neighbor)`,
+set:
+`visited = set()
+
+visited.add("A")
+visited.add("B")
+visited.add("A")          # already in the set
+
+print(visited)            # {"A", "B"}
+print("A" in visited)     # True
+print("C" in visited)     # False`,
+dfs:
+`def dfs(self, start):
+    visited = set()
+    self.dfs_from(start, visited)
+
+def dfs_from(self, node, visited):
+    visited.add(node)
+    print(node)
+    for neighbor in self.neighbors[node]:
+        if neighbor not in visited:
+            self.dfs_from(neighbor, visited)`,
+cmpT:
+`def print_from(self, node):
+    if node is None:
+        return
+    self.print_from(node.left)
+    print(node.value)
+    self.print_from(node.right)`,
+cmpG:
+`def dfs_from(self, node, visited):
+    visited.add(node)
+    print(node)
+    for neighbor in self.neighbors[node]:
+        if neighbor not in visited:
+            self.dfs_from(neighbor, visited)`,
+bfs:
+`def bfs(self, start):
+    visited = set()
+    queue = []
+    visited.add(start)
+    queue.append(start)
+    while len(queue) > 0:
+        node = queue.pop(0)
+        print(node)
+        for neighbor in self.neighbors[node]:
+            if neighbor not in visited:
+                visited.add(neighbor)
+                queue.append(neighbor)`,
+dfsAll:
+`def dfs_all(self):
+    visited = set()
+    for node in self.neighbors:
+        if node not in visited:
+            self.dfs_from(node, visited)`
+};
+
+/* ================= traces ================= */
+function dfsTrace(def, start){
+  const adj = adjOf(def), steps = [], S = {hl:{}, ehl:{}, tags:{}}, visited = [], out = [], stack = [];
+  const push = (line, note) => steps.push({line, note, g:clone(S), visited:visited.slice(), out:out.slice(), stack:stack.slice()});
+  push(1, `Calling graph.dfs("${start}")`);
+  stack.unshift(`dfs("${start}")`);
+  push(2, 'visited starts as an empty set');
+  push(3, `dfs_from starts at ${start}`);
+  const visit = (n, p) => {
+    stack.unshift(`dfs_from("${n}")`);
+    if (p) { S.ehl[ekOf(def, p, n)] = 'p'; S.hl[p] = 'done'; }
+    visited.push(n); out.push(n);
+    S.hl[n] = 'done cur'; S.tags = {[n]:'node'};
+    push([6, 7], `Add ${n} to visited and print it`);
+    for (const nb of adj[n]) {
+      const k = ekOf(def, n, nb), had = S.ehl[k], hadN = S.hl[nb] || '';
+      S.hl[n] = 'done cur'; S.tags = {[n]:'node', [nb]:'!neighbor'};
+      S.hl[nb] = hadN + ' chk'; if (!had) S.ehl[k] = 'chk';
+      const seen = visited.includes(nb);
+      push(seen ? 9 : [9, 10], seen ? `${nb} is already in visited, so we skip it` : `${nb} is not in visited, so call dfs_from("${nb}")`);
+      S.hl[nb] = hadN; if (!had) delete S.ehl[k];
+      if (!seen) visit(nb, n);
+    }
+    S.hl[n] = 'done cur'; S.tags = {[n]:'node'};
+    push(8, p ? `${n} has no more neighbors to check, so this call is done and we go back to ${p}` : `${n} has no more neighbors to check, so this call is done`);
+    stack.shift();
+    S.hl[n] = 'done';
+    if (p) { S.ehl[ekOf(def, p, n)] = 'u'; S.hl[p] = 'done cur'; S.tags = {[p]:'node'}; }
+  };
+  visit(start, null);
+  S.tags = {}; stack.length = 0;
+  push(null, `Done. Every node was visited once, in the order ${out.join(', ')}.`);
+  return steps;
+}
+function bfsTrace(def, start){
+  const adj = adjOf(def), steps = [], S = {hl:{}, ehl:{}, tags:{}}, visited = [], out = [], queue = [];
+  const push = (line, note) => steps.push({line, note, g:clone(S), visited:visited.slice(), out:out.slice(), queue:queue.slice(), stack:[]});
+  push(1, `Calling graph.bfs("${start}")`);
+  push([2, 3], 'visited and queue both start empty');
+  visited.push(start); queue.push(start); S.hl[start] = 'wait';
+  push([4, 5], `${start} goes into visited and into the queue`);
+  while (queue.length) {
+    const n = queue.shift();
+    S.hl[n] = 'cur'; S.tags = {[n]:'node'};
+    push([6, 7], `The queue is not empty, so remove ${n} from the front`);
+    out.push(n); S.hl[n] = 'done cur';
+    push(8, `Print ${n}`);
+    for (const nb of adj[n]) {
+      const k = ekOf(def, n, nb), had = S.ehl[k], hadN = S.hl[nb] || '';
+      S.tags = {[n]:'node', [nb]:'!neighbor'};
+      S.hl[nb] = hadN + ' chk'; if (!had) S.ehl[k] = 'chk';
+      if (visited.includes(nb)) {
+        push(10, `${nb} is already in visited, so we skip it`);
+        S.hl[nb] = hadN; if (!had) delete S.ehl[k];
+      } else {
+        push(10, `${nb} is not in visited`);
+        visited.push(nb); queue.push(nb); S.hl[nb] = 'wait chk'; S.ehl[k] = 'u';
+        push([11, 12], `Add ${nb} to visited and to the back of the queue`);
+        S.hl[nb] = 'wait';
+      }
+    }
+    S.hl[n] = 'done'; S.tags = {};
+  }
+  push(6, 'The queue is empty, so the loop stops');
+  push(null, `Done. Every node was visited once, in the order ${out.join(', ')}.`);
+  return steps;
+}
+
+/* ================= player ================= */
+const PLAYERS = [];
+class Player {
+  constructor(root, o = {}){
+    this.o = o; this.steps = []; this.i = 0; this.timer = 0;
+    root.classList.add('pl');
+    root.innerHTML = `<pre class="code"></pre>
+      <div class="pl-side">
+        <div class="pl-ctl"><button data-a="back">Back</button><button data-a="step" class="pri">Step</button><button data-a="play">Play</button><span class="pl-count"></span></div>
+        <p class="pl-note"></p>
+        <div class="pl-main">
+          <div class="dia"><svg></svg></div>
+          <div class="pl-bot">
+            <div data-p="dict" hidden><div class="lbl">self.neighbors</div><div class="adj"></div></div>
+            <div data-p="visited" hidden><div class="lbl">visited</div><div class="chips sm"></div></div>
+            <div data-p="queue" hidden><div class="lbl">queue (front on the left)</div><div class="chips sm"></div></div>
+            <div data-p="stack" hidden><div class="lbl">Call stack (newest on top)</div><div class="cstack"></div></div>
+            <div data-p="out" hidden><div class="lbl">Output</div><pre class="outbox"></pre></div>
+          </div>
+        </div>
+      </div>`;
+    this.pre = root.querySelector('pre.code');
+    this.note = root.querySelector('.pl-note');
+    this.count = root.querySelector('.pl-count');
+    this.P = {}; root.querySelectorAll('[data-p]').forEach(e => { this.P[e.dataset.p] = e; e.hidden = !(o.panels || []).includes(e.dataset.p); });
+    this.btn = {}; root.querySelectorAll('[data-a]').forEach(b => { this.btn[b.dataset.a] = b; });
+    this.btn.back.onclick = () => { this.pause(); this.go(this.i - 1); };
+    this.btn.step.onclick = () => { this.pause(); this.i >= this.steps.length - 1 ? this.go(0) : this.go(this.i + 1); };
+    this.btn.play.onclick = () => this.timer ? this.pause() : this.play();
+    this.view = new GraphView(root.querySelector('svg'), o.def, o.view || {});
+    renderCode(this.pre, o.code); this.lineEls = this.pre.querySelectorAll('.ln');
+    PLAYERS.push(this);
+  }
+  load(steps){ this.pause(); this.steps = steps; this.go(0); }
+  go(i){
+    i = Math.max(0, Math.min(this.steps.length - 1, i)); this.i = i;
+    const st = this.steps[i], pv = i > 0 ? this.steps[i-1] : null;
+    const lines = st.line == null ? [] : [].concat(st.line);
+    this.lineEls.forEach((el, k) => el.classList.toggle('on', lines.includes(k + 1)));
+    this.note.textContent = st.note || '';
+    const chips = (arr, old, cls) => arr.length ? arr.map((x, k) => `<span class="chip ${old && k >= old.length ? 'cur' : cls}">${esc(x)}</span>`).join('') : '<span class="mut small">empty</span>';
+    if (st.visited) this.P.visited.lastElementChild.innerHTML = chips(st.visited, pv && pv.visited, 'seen');
+    if (st.queue) this.P.queue.lastElementChild.innerHTML = chips(st.queue, pv && pv.queue && st.queue.length > pv.queue.length ? pv.queue : null, '');
+    if (st.stack) this.P.stack.lastElementChild.innerHTML = st.stack.map(f => f === '...' ? '<div class="more">...</div>' : `<div${st.boom ? ' class="boom"' : ''}>${esc(f)}</div>`).join('') || '<span class="mut small">empty</span>';
+    if (st.out) { const n = pv ? pv.out.length : 0; this.P.out.lastElementChild.innerHTML = st.out.map((l, k) => k >= n && i > 0 ? `<span class="new">${esc(l)}</span>` : esc(l)).join('\n') || ' '; }
+    if (st.dict) this.P.dict.lastElementChild.innerHTML = st.dict.map(([k, v]) => {
+      const old = pv && pv.dict && (pv.dict.find(d => d[0] === k) || [])[1];
+      const items = v.map((x, j) => (!old || j >= old.length) && i > 0 ? `<b>"${esc(x)}"</b>` : `"${esc(x)}"`).join(', ');
+      return `<div${!old && i > 0 || (old && old.length !== v.length) ? ' class="on"' : ''}>"${esc(k)}": [${items}]</div>`;
+    }).join('') || '<span class="mut small">{} &nbsp;empty</span>';
+    this.count.textContent = `Step ${i+1} of ${this.steps.length}`;
+    const end = i >= this.steps.length - 1;
+    this.btn.back.disabled = i === 0;
+    this.btn.step.textContent = end ? 'Start over' : 'Step';
+    this.view.show(st.g);
+  }
+  play(){
+    if (this.i >= this.steps.length - 1) this.go(0);
+    this.btn.play.textContent = 'Pause';
+    this.timer = setInterval(() => { this.go(this.i + 1); if (this.i >= this.steps.length - 1) this.pause(); }, this.o.speed || 1100);
+  }
+  pause(){ clearInterval(this.timer); this.timer = 0; if (this.btn) this.btn.play.textContent = 'Play'; }
+}
+function scenarios(rowId, player, items){
+  const row = $(rowId);
+  const pick = i => { [...row.children].forEach((b, k) => b.classList.toggle('sel', k === i)); player.load(items[i][1]()); };
+  items.forEach(([label], i) => { const b = document.createElement('button'); b.textContent = label; b.onclick = () => pick(i); row.appendChild(b); });
+  pick(0);
+}
+function stepper(back, step, n, render){
+  let i = 0;
+  const draw = () => { back.disabled = i === 0; step.textContent = i >= n - 1 ? 'Start over' : 'Step'; render(i); };
+  step.onclick = () => { i = i >= n - 1 ? 0 : i + 1; draw(); };
+  back.onclick = () => { i = Math.max(0, i - 1); draw(); };
+  draw();
+  return {set:k => { i = k; draw(); }, get:() => i, n};
+}
+
+/* ================= slide: title ================= */
+(() => {
+  const v = new GraphView($('titleG'), MAIN, {SX:104, SY:84, padTop:10});
+  const ids = Object.keys(MAIN.nodes);
+  const off = {}; ids.forEach(id => off[id] = true); MAIN.edges.forEach(e => off[e[0] + '-' + e[1]] = true);
+  v.show({off});
+  let k = 0;
+  const tick = () => {
+    const id = ids[k]; delete off[id];
+    MAIN.edges.forEach(([a, b]) => { if (!off[a] && !off[b]) delete off[a + '-' + b]; });
+    v.show({off}); k++;
+    if (k < ids.length) setTimeout(tick, 240);
+  };
+  setTimeout(tick, 300);
+})();
+
+/* ================= slide: tree to graph ================= */
+(() => {
+  const def = {nodes:{A:[1.5,0], B:[0.5,1], C:[2.5,1], D:[0,2], E:[1,2]}, edges:[['A','B'],['A','C'],['B','D'],['B','E'],['C','E'],['D','E']], tagAt:{A:'r'}};
+  const v = new GraphView($('morphG'), def, {SX:100, SY:84, padTop:14});
+  const set = g => {
+    $('mTree').classList.toggle('sel', !g); $('mGraph').classList.toggle('sel', g);
+    v.show(g ? {ehl:{'A-B':'p', 'B-E':'p', 'C-E':'p', 'A-C':'p'}, hl:{A:'path', B:'path', E:'path', C:'path'}}
+             : {off:{'C-E':true, 'D-E':true}, tags:{A:'root'}, ehl:{'A-B':'p', 'B-E':'p'}, hl:{A:'path', B:'path', E:'path'}});
+    $('morphCap').textContent = g
+      ? 'With two more edges it becomes a graph. Now we can get from A to E through B or through C, and A, B, E, C is a loop.'
+      : 'In a tree there is only one way to get from A to E, and it goes through B';
+  };
+  $('mTree').onclick = () => set(false);
+  $('mGraph').onclick = () => set(true);
+  set(false);
+})();
+
+/* ================= slide: neighbors ================= */
+(() => {
+  const v = new GraphView($('nbG'), MAIN, {onClick:id => pick(id), padTop:14});
+  const pick = id => {
+    const hl = {}, ehl = {};
+    for (const k in MAIN.nodes) hl[k] = k === id ? 'cur' : ADJ[id].includes(k) ? 'L' : 'dim';
+    MAIN.edges.forEach(([a, b]) => { ehl[a + '-' + b] = a === id || b === id ? 'p' : 'dim'; });
+    v.show({hl, ehl});
+    const n = ADJ[id];
+    $('nbCap').textContent = n.length === 1 ? `${id} has 1 edge, so it has 1 neighbor, ${n[0]}` : `${id} has ${n.length} edges, so it has ${n.length} neighbors, ${list(n)}`;
+  };
+  pick('B');
+})();
+
+/* ================= slide: uses ================= */
+(() => {
+  const o = {SX:64, SY:58, r:19, padTop:6, padBot:6};
+  new GraphView($('useMap'), {nodes:{SF:[0,0], LV:[2.2,0.3], LA:[0.9,1.3], SD:[1.6,2.3], PHX:[3,1.7]}, edges:[['SF','LA'],['LA','LV'],['LA','SD'],['SD','PHX'],['LV','PHX'],['LA','PHX']]}, o).show();
+  new GraphView($('useFr'), {nodes:{Ana:[0,0.2], Ben:[1.6,0], Cy:[3,0.8], Dee:[0.6,1.8], Eli:[2.2,2.2]}, edges:[['Ana','Ben'],['Ana','Dee'],['Ben','Cy'],['Ben','Dee'],['Dee','Eli'],['Cy','Eli']]}, o).show();
+  const lab = {h:'', n:'', s:'', c:'', a:''};
+  new GraphView($('useWeb'), {nodes:{h:[1.5,0], n:[0,0.9], s:[3,0.9], a:[0.5,2], c:[2.5,2]}, labels:lab, sub:{h:'Home', n:'News', s:'Shop', a:'About', c:'Cart'}, subUp:{h:true},
+    edges:[['h','n'],['h','s'],['n','a'],['s','c'],['c','h'],['a','h']]}, Object.assign({}, o, {r:12, SX:62, SY:60, padTop:22})).show({dir:true});
+})();
+
+/* ================= slide: directed ================= */
+(() => {
+  const def = {nodes:{Ana:[0,0.5], Ben:[1.8,0], Cy:[1.2,1.7], Dee:[3.2,1.1]}, edges:[['Ana','Ben'],['Ana','Cy',true],['Ben','Dee'],['Dee','Cy'],['Ben','Cy']]};
+  const v = new GraphView($('dirG'), def, {SX:100, SY:84, r:25, padTop:10});
+  const set = d => {
+    $('dirU').classList.toggle('sel', !d); $('dirD').classList.toggle('sel', d);
+    v.show({dir:d, hl:d ? {Ana:'path', Ben:'path', Cy:'path'} : {}, ehl:d ? {'Ana-Ben':'p', 'Ana-Cy':'p'} : {}});
+    $('dirCap').textContent = d
+      ? 'Each arrow points from a person to someone they follow. Ana follows Ben and Cy, and only Cy follows her back.'
+      : 'Every edge is a friendship, so it can be followed in both directions';
+  };
+  $('dirU').onclick = () => set(false);
+  $('dirD').onclick = () => set(true);
+  set(false);
+})();
+
+/* ================= slide: adjacency list ================= */
+(() => {
+  const v = new GraphView($('adjG'), MAIN, {onClick:id => pick(id), padTop:14});
+  const pick = id => {
+    const hl = {}, ehl = {};
+    for (const k in MAIN.nodes) hl[k] = k === id ? 'cur' : ADJ[id].includes(k) ? 'L' : 'dim';
+    MAIN.edges.forEach(([a, b]) => { ehl[a + '-' + b] = a === id || b === id ? 'p' : 'dim'; });
+    v.show({hl, ehl});
+    $('adjT').innerHTML = Object.keys(ADJ).map(k => `<div data-k="${k}"${k === id ? ' class="on"' : ''}>"${k}": [${ADJ[k].map(x => x === id ? `<b>"${x}"</b>` : `"${x}"`).join(', ')}]</div>`).join('');
+    const n = ADJ[id];
+    $('adjCap').textContent = `${id} is connected to ${list(n)}, so that's what is in its list. Every edge is stored twice, so ${id} is also in the ${n.length === 1 ? 'list' : 'lists'} of ${list(n)}.`;
+  };
+  $('adjT').addEventListener('click', e => { const t = e.target.closest('[data-k]'); if (t) pick(t.dataset.k); });
+  pick('B');
+})();
+
+/* ================= slide: graph class ================= */
+renderCode($('cGraph'), CODE.graph);
+renderCode($('cSet'), CODE.set, false);
+renderCode($('cCmpT'), CODE.cmpT, false);
+renderCode($('cCmpG'), CODE.cmpG, false);
+
+/* ================= slide: building ================= */
+(() => {
+  const def = {nodes:{A:[0.9,0], B:[0,1.3], C:[1.8,1.3], D:[2.9,0.5]}, edges:[['A','B'],['A','C'],['B','C'],['C','D']]};
+  const p = new Player($('buildPl'), {code:CODE.graph, def, view:{padTop:14}, panels:['dict'], speed:1200});
+  const off = {}; Object.keys(def.nodes).forEach(k => off[k] = true); def.edges.forEach(e => off[e[0] + '-' + e[1]] = true);
+  const dict = [], S = {off, hl:{}, ehl:{}}, steps = [];
+  const push = (line, note) => steps.push({line, note, g:clone(S), dict:clone(dict)});
+  const get = k => dict.find(d => d[0] === k);
+  push([1, 2, 3], 'A new graph has an empty dictionary');
+  def.edges.forEach(([a, b]) => {
+    S.hl = {};
+    push(9, `Calling graph.add_edge("${a}", "${b}")`);
+    [a, b].forEach((x, i) => {
+      if (get(x)) { S.hl[x] = 'path'; push(10 + i, `${x} is already in the dictionary, so add_node does nothing`); }
+      else { dict.push([x, []]); delete S.off[x]; S.hl[x] = 'path'; push(10 + i, `${x} is new, so add_node gives it an empty list`); }
+    });
+    get(a)[1].push(b); delete S.off[a + '-' + b]; S.ehl = {[a + '-' + b]:'p'};
+    push(12, `Add ${b} to ${a}'s list`);
+    get(b)[1].push(a);
+    push(13, `Add ${a} to ${b}'s list`);
+    S.ehl = {};
+  });
+  S.hl = {};
+  push(null, 'Done. The graph has 4 nodes and 4 edges, and every edge is in two lists.');
+  p.load(steps);
+})();
+
+/* ================= slide: loop ================= */
+(() => {
+  const def = {nodes:{A:[1,0], B:[0,1.4], C:[2,1.4]}, edges:[['A','B'],['A','C'],['B','C']], tagAt:{A:'t', B:'b', C:'b'}};
+  const p = new Player($('loopPl'), {code:CODE.naive, def, view:{pad:40, padTop:36, padBot:30}, panels:['stack', 'out'], speed:1300});
+  const steps = [], out = [], stack = [];
+  const push = (line, note, cur, extra = {}) => steps.push(Object.assign({line, note, g:{hl:{[cur]:'cur'}, tags:{[cur]:'node'}, ehl:{'A-B':stack.length > 1 ? 'p' : ''}}, out:out.slice(), stack:stack.slice()}, extra));
+  stack.unshift('visit("A")'); push(1, 'Calling graph.visit("A")', 'A');
+  out.push('A'); push(2, 'Print A', 'A');
+  stack.unshift('visit("B")'); push([3, 4], 'The first neighbor of A is B, so call visit("B")', 'A');
+  out.push('B'); push(2, 'Print B', 'B');
+  stack.unshift('visit("A")'); push([3, 4], 'The first neighbor of B is A, so call visit("A") again', 'B');
+  out.push('A'); push(2, 'Print A a second time', 'A');
+  stack.unshift('visit("B")'); push([3, 4], 'The first neighbor of A is still B, so call visit("B") again', 'A');
+  out.push('B'); push(2, 'Print B a second time', 'B');
+  stack.unshift('...'); out.push('...', 'RecursionError');
+  push(null, 'This never ends. A and B keep calling each other and C is never reached. Python stops with a RecursionError when the call stack gets too deep.', 'B');
+  p.load(steps);
+})();
+
+/* ================= slide: dfs idea ================= */
+(() => {
+  const v = new GraphView($('diG'), MAIN, {padTop:14});
+  // [current, path so far, finished nodes, caption]
+  const S = [
+    ['A', 'A', '', 'We start at A'],
+    ['B', 'AB', '', 'B is the first neighbor of A, so we go there'],
+    ['D', 'ABD', '', 'From B we go to D, the first neighbor of B we haven\'t visited'],
+    ['B', 'AB', 'D', 'The only neighbor of D is B and we\'ve already visited it, so we go back to B'],
+    ['E', 'ABE', 'D', 'The next unvisited neighbor of B is E'],
+    ['C', 'ABEC', 'D', 'From E we go to C. We could have reached C straight from A, but DFS keeps moving forward for as long as it can.'],
+    ['F', 'ABECF', 'D', 'A and E are already visited, so from C we go to F'],
+    ['G', 'ABECFG', 'D', 'From F we go to G'],
+    ['A', 'A', 'DGFCEB', 'Every neighbor of G is visited. The same is true for F, C, E and B, so we go back through all of them to A.'],
+    [null, '', 'DGFCEBA', 'A has no unvisited neighbors left, so we\'re done. The order was A, B, D, E, C, F, G.']
+  ];
+  const order = 'ABDECFG';
+  stepper($('diBack'), $('diStep'), S.length, i => {
+    const [cur, path, fin, cap] = S[i], hl = {}, ehl = {};
+    const seen = new Set((path + fin).split(''));
+    for (const k of seen) hl[k] = 'done';
+    if (cur) hl[cur] = 'done cur';
+    const tree = {B:'A', D:'B', E:'B', C:'E', F:'C', G:'F'};
+    for (const k of seen) if (tree[k]) ehl[ekOf(MAIN, tree[k], k)] = path.includes(k) ? 'p' : 'u';
+    v.show({hl, ehl});
+    $('diOut').innerHTML = order.split('').filter(k => seen.has(k)).map(k => `<span class="chip seen">${k}</span>`).join('');
+    $('diCap').textContent = cap;
+  });
+})();
+
+/* ================= players: dfs, bfs ================= */
+const PV = {pad:74, padTop:36, padBot:30, SX:84, SY:74};
+scenarios('dfsSc', new Player($('dfsPl'), {code:CODE.dfs, def:MAIN, view:PV, panels:['visited', 'stack', 'out']}), [
+  ['Start at A', () => dfsTrace(MAIN, 'A')],
+  ['Start at G', () => dfsTrace(MAIN, 'G')]
+]);
+scenarios('bfsSc', new Player($('bfsPl'), {code:CODE.bfs, def:MAIN, view:PV, panels:['visited', 'queue', 'out']}), [
+  ['Start at A', () => bfsTrace(MAIN, 'A')],
+  ['Start at G', () => bfsTrace(MAIN, 'G')]
+]);
+
+/* ================= slide: bfs idea ================= */
+(() => {
+  const def = Object.assign({}, MAIN, {rows:['Level 0', 'Level 1', 'Level 2', 'Level 3']});
+  const v = new GraphView($('biG'), def, {padTop:14});
+  const L = [['A'], ['B', 'C'], ['D', 'E', 'F'], ['G']];
+  const caps = [
+    'We start at A, which is level 0',
+    'Level 1 is every neighbor of A, so B and C',
+    'Level 2 is every unvisited neighbor of B and C, so D, E and F',
+    'Level 3 is G, the only node left',
+    'Done. The order was A, B, C, D, E, F, G. The level of a node is the fewest edges it takes to get there from A, which is why BFS is used to find the shortest path.'
+  ];
+  const par = {B:'A', C:'A', D:'B', E:'B', F:'C', G:'E'};
+  stepper($('biBack'), $('biStep'), caps.length, i => {
+    const hl = {}, ehl = {}, seen = [];
+    L.forEach((lv, k) => { if (k <= i) lv.forEach(x => { hl[x] = k === i ? 'done cur' : 'done'; seen.push(x); if (par[x]) ehl[ekOf(MAIN, par[x], x)] = k === i ? 'p' : 'u'; }); });
+    v.show({hl, ehl, rows:Math.min(i + 1, 4)});
+    $('biOut').innerHTML = seen.map(k => `<span class="chip seen">${k}</span>`).join('');
+    $('biCap').textContent = caps[i];
+  });
+})();
+
+/* ================= slide: dfs vs bfs ================= */
+(() => {
+  let start = 'A', A, B, st, timer = 0;
+  const o = {padTop:32, SX:84, SY:72, onClick:id => { start = id; setup(); }};
+  const va = new GraphView($('vsA'), MAIN, o), vb = new GraphView($('vsB'), MAIN, o);
+  const orders = s => {
+    const d = [], dp = {}, seen = new Set();
+    const go = (n, p) => { seen.add(n); d.push(n); dp[n] = p; ADJ[n].forEach(x => { if (!seen.has(x)) go(x, n); }); };
+    go(s, null);
+    const b = [s], bp = {[s]:null}, q = [s], vis = new Set([s]);
+    while (q.length) { const n = q.shift(); ADJ[n].forEach(x => { if (!vis.has(x)) { vis.add(x); bp[x] = n; b.push(x); q.push(x); } }); }
+    return [{o:d, p:dp}, {o:b, p:bp}];
+  };
+  const pause = () => { clearInterval(timer); timer = 0; $('vsPlay').textContent = 'Play'; };
+  const draw = (v, T, box, i) => {
+    const hl = {}, ehl = {};
+    T.o.slice(0, i + 1).forEach((x, k) => { hl[x] = k === i ? 'done cur' : 'done'; if (T.p[x]) ehl[ekOf(MAIN, T.p[x], x)] = k === i ? 'p' : 'u'; });
+    v.show({hl, ehl, tags:{[start]:'start'}});
+    box.innerHTML = T.o.slice(0, i + 1).map((x, k) => `<span class="chip ${k === i ? 'cur' : 'seen'}">${x}</span>`).join('');
+  };
+  function setup(){ pause(); [A, B] = orders(start); st.set(0); }
+  st = stepper($('vsBack'), $('vsStep'), 7, i => { if (A) { draw(va, A, $('vsOA'), i); draw(vb, B, $('vsOB'), i); } });
+  $('vsStep').addEventListener('click', pause, true); $('vsBack').addEventListener('click', pause, true);
+  $('vsPlay').onclick = () => {
+    if (timer) return pause();
+    if (st.get() >= 6) st.set(0);
+    $('vsPlay').textContent = 'Pause';
+    timer = setInterval(() => { st.set(st.get() + 1); if (st.get() >= 6) pause(); }, 800);
+  };
+  PLAYERS.push({pause});
+  setup();
+})();
+
+/* ================= slide: not connected ================= */
+(() => {
+  const def = {nodes:{A:[0.8,0], B:[0,1.3], C:[1.6,1.3], X:[2.9,0.2], Y:[3.5,1.3]}, edges:[['A','B'],['A','C'],['B','C'],['X','Y']]};
+  const p = new Player($('allPl'), {code:CODE.dfsAll, def, view:{padTop:16}, panels:['visited', 'out'], speed:1300});
+  const steps = [], S = {hl:{}, ehl:{}, tags:{}}, visited = [], out = [];
+  const push = (line, note) => steps.push({line, note, g:clone(S), visited:visited.slice(), out:out.slice()});
+  push(1, 'Calling graph.dfs_all()');
+  push(2, 'visited starts as an empty set');
+  const groups = {A:['A', 'B', 'C'], X:['X', 'Y']}, tree = {A:['A-B', 'B-C'], X:['X-Y']};
+  Object.keys(def.nodes).forEach(n => {
+    for (const k in S.hl) S.hl[k] = S.hl[k].replace(' cur', '');
+    S.hl[n] = (S.hl[n] || '') + ' cur'; S.tags = {[n]:'node'};
+    if (visited.includes(n)) { push([3, 4], `${n} is already in visited, so we skip it`); return; }
+    push([3, 4], `${n} is not in visited`);
+    groups[n].forEach(x => { visited.push(x); out.push(x); S.hl[x] = 'done'; });
+    S.hl[n] = 'done cur'; tree[n].forEach(k => S.ehl[k] = 'u');
+    push(5, `dfs_from("${n}") visits ${list(groups[n])}, every node it can reach from ${n}`);
+  });
+  for (const k in S.hl) S.hl[k] = 'done'; S.tags = {};
+  push(null, 'Done. It took two searches to visit every node because the graph is in two pieces.');
+  p.load(steps);
+})();
+
+/* ================= slide: space ================= */
+(() => {
+  const line = {nodes:{A:[0,0], B:[0.8,0.9], C:[0,1.8], D:[0.8,2.7], E:[0,3.6]}, edges:[['A','B'],['B','C'],['C','D'],['D','E']]};
+  const star = {nodes:{A:[1.2,1.3], B:[1.2,0], C:[2.4,1.3], D:[1.2,2.6], E:[0,1.3]}, edges:[['A','B'],['A','C'],['A','D'],['A','E']], tagAt:{A:'b'}};
+  const v = new GraphView($('spG'), line, {SX:70, SY:62, r:20, padTop:30});
+  const set = s => {
+    $('spLine').classList.toggle('sel', !s); $('spStar').classList.toggle('sel', s);
+    v.build(s ? star : line);
+    v.show({hl:{A:'cur'}, tags:{A:'start'}});
+    const stack = s ? ['dfs_from("B")', 'dfs_from("A")', 'dfs("A")'] : ['dfs_from("E")', 'dfs_from("D")', 'dfs_from("C")', 'dfs_from("B")', 'dfs_from("A")', 'dfs("A")'];
+    $('spStack').innerHTML = stack.map(f => `<div>${esc(f)}</div>`).join('');
+    $('spQ').innerHTML = (s ? ['B', 'C', 'D', 'E'] : ['B']).map(x => `<span class="chip">${x}</span>`).join('');
+    $('spCap').textContent = s
+      ? 'DFS never gets more than one step away from A, so the call stack stays short. BFS puts every neighbor of A in the queue at once.'
+      : 'DFS has to go through every node to reach E, so every call is on the stack at once. BFS never has more than one node waiting.';
+  };
+  $('spLine').onclick = () => set(false);
+  $('spStar').onclick = () => set(true);
+  set(false);
+})();
+
+/* ================= playground (Skulpt) ================= */
+const SK = ['https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js', 'https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt-stdlib.js'];
+let skP = null;
+function loadScript(src){ return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('Could not load Python')); document.head.appendChild(s); }); }
+function loadSk(){ if (!skP) skP = loadScript(SK[0]).then(() => loadScript(SK[1])).then(() => window.Sk).catch(e => { skP = null; throw e; }); return skP; }
+async function runPy(code){
+  const Sk = await loadSk();
+  let out = '';
+  Sk.configure({
+    output: t => { out += t; },
+    read: f => { if (Sk.builtinFiles === undefined || Sk.builtinFiles.files[f] === undefined) throw "File not found: '" + f + "'"; return Sk.builtinFiles.files[f]; },
+    __future__: Sk.python3, execLimit: 3000
+  });
+  try { await Sk.misceval.asyncToPromise(() => Sk.importMainWithBody('<stdin>', false, code, true)); return {out}; }
+  catch (e) { let msg = e.toString(); if (/TimeLimitError/.test(msg)) msg = 'Stopped after 3 seconds. A loop is probably never ending.'; return {out, err:msg}; }
+}
+function editorKeys(ta){
+  ta.addEventListener('keydown', e => {
+    if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); ta.setRangeText('    ', ta.selectionStart, ta.selectionEnd, 'end'); }
+    else if (e.key === 'Enter') {
+      const s = ta.selectionStart, before = ta.value.slice(0, s), line = before.slice(before.lastIndexOf('\n') + 1);
+      let ind = (line.match(/^ */) || [''])[0]; if (/:\s*$/.test(line)) ind += '    ';
+      e.preventDefault(); ta.setRangeText('\n' + ind, s, ta.selectionEnd, 'end');
+    }
+  });
+}
+(() => {
+  const ind = code => code.split('\n').map(l => l ? '    ' + l : l).join('\n');
+  const START = CODE.graph + '\n\n' + ind(CODE.print) + '\n\n' + ind(CODE.dfs) + '\n\n' + ind(CODE.bfs) + '\n';
+  const ed = $('pgEd'); ed.value = START; editorKeys(ed);
+  const INIT = MAIN.edges.map(([a, b]) => `add_edge("${a}", "${b}")`);
+  let ops = INIT.slice();
+  const out = $('pgOut');
+  const log = html => { out.innerHTML += (out.innerHTML ? '\n' : '') + html; out.scrollTop = out.scrollHeight; };
+  // data = [[name, [neighbors]]] in dictionary order
+  function draw(data){
+    const names = data.map(d => d[0]), n = names.length, svg = $('pgSvg');
+    const extra = names.filter(x => !MAIN.nodes[x]);
+    const isMain = n - extra.length === 7 && extra.length <= 4;
+    const nodes = {}, R = Math.max(70, n * 17);
+    names.forEach((x, i) => {
+      const k = extra.indexOf(x);
+      nodes[x] = !isMain ? [R + R * Math.sin(i / n * 2 * Math.PI), R - R * Math.cos(i / n * 2 * Math.PI)]
+        : k < 0 ? [MAIN.nodes[x][0] * 84, MAIN.nodes[x][1] * 74] : [4.1 * 84, k * 74];
+    });
+    const has = (a, b) => (data.find(d => d[0] === a) || [0, []])[1].includes(b);
+    const edges = [], done = {};
+    let dir = false;
+    data.forEach(([a, nb]) => nb.forEach(b => {
+      if (!(b in nodes) || a === b || done[a + '|' + b]) return;
+      const back = has(b, a);
+      done[a + '|' + b] = done[b + '|' + a] = true;
+      if (!back) dir = true;
+      edges.push([a, b, back]);
+    }));
+    const fresh = svg.cloneNode(false); svg.replaceWith(fresh);
+    if (!n) { fresh.setAttribute('viewBox', '0 0 10 10'); fresh.style.width = '10px'; return; }
+    new GraphView(fresh, {nodes, edges}, {SX:1, SY:1, r:21, padTop:10}).show({dir});
+  }
+  const fromOps = () => { const d = []; MAIN.edges.forEach(([a, b]) => { [[a, b], [b, a]].forEach(([x, y]) => { let r = d.find(q => q[0] === x); if (!r) d.push(r = [x, []]); r[1].push(y); }); }); return d; };
+  draw(fromOps());
+  const harness = last => `
+_g = Graph()
+${ops.slice(0, -1).map(o => '_g.' + o).join('\n')}
+print("@@BEGIN")
+_r = _g.${last}
+if _r is not None:
+    print(_r)
+_s = []
+for _k in _g.neighbors:
+    _s.append('["' + str(_k) + '",[' + ",".join(['"' + str(_x) + '"' for _x in _g.neighbors[_k]]) + ']]')
+print("@@G [" + ",".join(_s) + "]")
+`;
+  async function call(op){
+    ops.push(op);
+    $('pgStatus').textContent = window.Sk ? 'Running...' : 'Loading Python, this takes a moment the first time...';
+    let r;
+    try { r = await runPy(ed.value + '\n' + harness(op)); }
+    catch (e) { $('pgStatus').textContent = ''; ops.pop(); log(`<span class="err">${esc(e.message)}. Check your internet connection.</span>`); return; }
+    $('pgStatus').textContent = '';
+    log(`<b>graph.${esc(op)}</b>`);
+    const lines = r.out.split('\n'); const b = lines.indexOf('@@BEGIN');
+    let data;
+    lines.slice(b + 1).forEach(line => {
+      if (line.startsWith('@@G ')) { try { data = JSON.parse(line.slice(4)); } catch (e) {} }
+      else if (line !== '') log(esc(line));
+    });
+    if (r.err) { log(`<span class="err">${esc(r.err)}</span>`); ops.pop(); return; }
+    if (!/^add_/.test(op)) ops.pop();
+    if (data) draw(data);
+  }
+  const val = id => { const x = $(id).value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3); return x || 'A'; };
+  [['add_edge(a, b)', () => `add_edge("${val('pgA')}", "${val('pgB')}")`], ['add_node(a)', () => `add_node("${val('pgA')}")`], ['dfs(a)', () => `dfs("${val('pgA')}")`], ['bfs(a)', () => `bfs("${val('pgA')}")`], ['print()', () => 'print()']].forEach(([name, f], i) => {
+    const b = document.createElement('button'); b.textContent = name; if (i === 0) b.className = 'pri';
+    b.onclick = async () => { b.disabled = true; await call(f()); b.disabled = false; };
+    $('pgBtns').appendChild(b);
+  });
+  $('pgResetG').onclick = () => { ops = INIT.slice(); draw(fromOps()); log('<span class="mut">Graph reset</span>'); };
+  $('pgClear').onclick = () => { ops = []; draw([]); log('<span class="mut">Empty graph</span>'); };
+  $('pgResetCode').onclick = () => { ed.value = START; };
+})();
+
+/* ================= navigation ================= */
+const slides = [...document.querySelectorAll('.slide')];
+let cur = 0;
+function goSlide(i){
+  i = Math.max(0, Math.min(slides.length - 1, i));
+  PLAYERS.forEach(p => p.pause());
+  slides[cur].classList.remove('on');
+  cur = i;
+  slides[cur].classList.add('on');
+  $('stage').scrollTop = 0;
+  $('cnt').textContent = `${cur+1} / ${slides.length}`;
+  $('ttl').textContent = slides[cur].dataset.title;
+  $('prev').disabled = cur === 0;
+  $('next').disabled = cur === slides.length - 1;
+  $('prog').style.width = ((cur + 1) / slides.length * 100) + '%';
+  try { history.replaceState(null, '', '#' + (cur + 1)); } catch (e) {}
+}
+$('prev').onclick = () => goSlide(cur - 1);
+$('next').onclick = () => goSlide(cur + 1);
+document.addEventListener('keydown', e => {
+  if (e.target.closest('input, textarea, select')) return;
+  if (e.key === 'ArrowRight' || e.key === 'PageDown') { e.preventDefault(); goSlide(cur + 1); }
+  else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); goSlide(cur - 1); }
+});
+const start = parseInt((location.hash || '').slice(1), 10);
+goSlide(Number.isFinite(start) ? start - 1 : 0);
+})();
+</script>
+</body>
+</html>
