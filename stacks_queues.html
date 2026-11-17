@@ -111,6 +111,7 @@ input[type=range]{width:100%;margin:6px 0 22px}
   .slots,.mnodes{gap:4px}
   .mnodes{font-size:16px}
 }
+*, *::before, *::after{touch-action:manipulation}
 </style>
 </head>
 <body>
@@ -1297,6 +1298,24 @@ document.addEventListener('touchend', e => {
   if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) go(cur + (dx < 0 ? 1 : -1));
 }, { passive: true });
 go((parseInt(location.hash.slice(1)) || 1) - 1);
+</script>
+<script>
+/* Phones: stop a fast double tap from zooming the page. The second tap still counts as a tap. */
+(() => {
+  let last = 0, sx = 0, sy = 0;
+  document.addEventListener('touchstart', e => {
+    if (e.touches.length === 1) { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }
+  }, { passive: true });
+  document.addEventListener('touchend', e => {
+    const now = Date.now(), t = e.target, c = e.changedTouches[0];
+    const still = Math.abs(c.clientX - sx) < 10 && Math.abs(c.clientY - sy) < 10;
+    if (e.cancelable && e.touches.length === 0 && still && now - last < 350 && t.closest && !t.closest('input, textarea, select, [contenteditable]')) {
+      e.preventDefault();
+      t.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window, clientX: c.clientX, clientY: c.clientY }));
+    }
+    last = now;
+  }, { passive: false });
+})();
 </script>
 </body>
 </html>

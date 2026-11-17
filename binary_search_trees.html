@@ -1894,5 +1894,23 @@ const start = parseInt((location.hash || '').slice(1), 10);
 goSlide(Number.isFinite(start) ? start - 1 : 0);
 })();
 </script>
+<script>
+/* Phones: stop a fast double tap from zooming the page. The second tap still counts as a tap. */
+(() => {
+  let last = 0, sx = 0, sy = 0;
+  document.addEventListener('touchstart', e => {
+    if (e.touches.length === 1) { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }
+  }, { passive: true });
+  document.addEventListener('touchend', e => {
+    const now = Date.now(), t = e.target, c = e.changedTouches[0];
+    const still = Math.abs(c.clientX - sx) < 10 && Math.abs(c.clientY - sy) < 10;
+    if (e.cancelable && e.touches.length === 0 && still && now - last < 350 && t.closest && !t.closest('input, textarea, select, [contenteditable]')) {
+      e.preventDefault();
+      t.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window, clientX: c.clientX, clientY: c.clientY }));
+    }
+    last = now;
+  }, { passive: false });
+})();
+</script>
 </body>
 </html>
