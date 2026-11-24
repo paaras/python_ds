@@ -448,6 +448,24 @@ table.t td code{white-space:nowrap}
 .arr .al{display:flex; flex-direction:column; align-items:flex-end; gap:.3rem}
 .arr .alt{height:3.5rem; display:flex; flex-direction:column; justify-content:center; align-items:flex-end; font-size:.8rem; color:var(--muted); line-height:1.35}
 .arr .alt b{font-size:.95rem; color:var(--ink)}
+
+/* ===== phones ===== */
+@media (max-width:600px){
+  .arr{flex-direction:column; align-items:flex-start; gap:.25rem}
+  .arr .al{flex-direction:row; align-items:center}
+  .arr .al .ix{display:none}
+  .arr .alt{height:auto; flex-direction:row; gap:.5rem}
+  .arr .av{min-width:0; width:calc((100vw - 36px) / 8); height:3rem; padding:0}
+  .arr .av b{font-size:.78rem} .arr .av i{font-size:.74rem}
+  .ht.sm .hrow{flex-wrap:wrap; white-space:normal; row-gap:.25rem}
+  table.t th, table.t td{padding:.55rem .9rem .55rem 0}
+  table.t.tight th, table.t.tight td{padding:.32rem .9rem .32rem 0}
+  table.t.all th, table.t.all td{padding:.5rem .45rem .5rem 0; font-size:.8rem}
+  table.t.all td.o span{display:block; font-size:.72rem}
+  .formula{font-size:1.05rem}
+}
+@media (max-width:480px){ pre.code{font-size:.7rem} }
+@media (max-width:380px){ pre.code{font-size:.64rem} table.t.all th, table.t.all td{padding-right:.3rem; font-size:.76rem} }
 </style>
 </head>
 <body>
@@ -1152,7 +1170,7 @@ resize:
             current = current.next`
 };
 renderCode($('cSum'), CODE.sum, false);
-renderCode($('cMenu'), 'menu = [["tea", 2], ["pie", 5], ["egg", 3], ["jam", 4], ["bun", 2], ["nut", 3], ["oat", 4]]', false);
+renderCode($('cMenu'), 'menu = [\n    ["tea", 2], ["pie", 5], ["egg", 3], ["jam", 4],\n    ["bun", 2], ["nut", 3], ["oat", 4]\n]', false);
 renderCode($('cHash'), CODE.sum + '\nindex = total % 8', false);
 renderCode($('cMul'), CODE.mul, false);
 renderCode($('cRs'), 'if self.count > len(self.buckets):\n    self.resize()', false);
