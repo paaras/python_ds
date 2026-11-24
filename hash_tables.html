@@ -1,0 +1,1645 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hash Tables</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#ffffff; --ink:#16181d; --muted:#626a76; --line:#e3e5ea; --soft:#f5f6f8;
+  --hi:#1556d6; --hi-soft:#e7eefc; --am:#c2610c; --am-soft:#fdf0e2;
+  --err:#b3261e; --err-soft:#fbe9e7; --ok:#1e7f43; --ok-soft:#e5f4ea;
+  --sans:"Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html{font-size:clamp(15px, 0.85vw + 6px, 21px); height:100%}
+@media (max-height:820px) and (min-width:861px){html{font-size:clamp(14px, 0.7vw + 5px, 17px)}}
+body{background:var(--bg); color:var(--ink); font-family:var(--sans); height:100%; margin:0; -webkit-font-smoothing:antialiased}
+.deck{height:100%; display:flex; flex-direction:column}
+.stage{flex:1; overflow-y:auto; overflow-x:hidden; padding-inline:16px}
+.slide{display:none; max-width:1200px; margin:0 auto; padding-block:1.4rem 1.4rem}
+.slide.on{display:flex; flex-direction:column; gap:1.05rem; animation:fadein .35s ease}
+@keyframes fadein{from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none}}
+h1{font-size:2rem; line-height:1.15; margin:0; font-weight:800; letter-spacing:-.02em; text-wrap:balance}
+h1.big{font-size:3.4rem}
+.kicker{font-size:.8rem; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--hi); margin-bottom:-.9rem}
+p{margin:0; font-size:1.1rem; line-height:1.5; max-width:66ch}
+p.lead{font-size:1.3rem; color:#2c313a}
+ul.pts{margin:0; padding-left:1.15em; font-size:1.1rem; line-height:1.5; max-width:66ch; display:flex; flex-direction:column; gap:.25rem}
+ul.pts li::marker{color:var(--hi)}
+code{font-family:var(--mono); font-size:.86em; background:var(--soft); padding:.08em .35em; border-radius:4px; border:1px solid var(--line)}
+b.blue{color:var(--hi)} b.am{color:var(--am)} b.red{color:var(--err)} b.green{color:var(--ok)}
+.mut{color:var(--muted)} .small{font-size:.95rem}
+.cols{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:1.6rem 3rem; align-items:start}
+.cols > *{min-width:0}
+.stack{display:flex; flex-direction:column; gap:1rem; min-width:0}
+@media (max-width:860px){.cols{grid-template-columns:minmax(0,1fr)}}
+.lbl{font-size:.76rem; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:700; margin-bottom:.35rem}
+.card{border:1px solid var(--line); border-radius:12px; padding:1.1rem 1.25rem; background:var(--bg)}
+.card.soft{background:var(--soft); border-color:transparent}
+.big-num{font-size:2.6rem; font-weight:800; letter-spacing:-.02em; font-variant-numeric:tabular-nums; line-height:1.1}
+
+/* code */
+pre.code{font-family:var(--mono); font-size:.84rem; line-height:1.6; background:var(--soft); border:1px solid var(--line); border-radius:10px; padding:.8rem 0; margin:0; overflow-x:auto}
+pre.code .ln{display:block; padding:0 1.1rem 0 .9rem; white-space:pre; border-left:4px solid transparent; transition:background .2s}
+pre.code .ln.on{background:var(--hi-soft); border-left-color:var(--hi)}
+pre.code .ln .no{display:inline-block; width:1.7em; color:#b0b5bd; user-select:none}
+pre.code .kw{font-weight:700; color:#1d2b6b}
+pre.code .cm{color:var(--muted); font-style:italic}
+pre.code .st{color:#8a4b00}
+
+/* controls */
+*, *::before, *::after{touch-action:manipulation}
+button, .nav, .chip, svg.tree{-webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent}
+button{font:inherit; font-size:.92rem; font-weight:600; border:1.5px solid var(--ink); background:var(--bg); color:var(--ink); border-radius:8px; padding:.42em .95em; cursor:pointer; transition:background .15s, color .15s, transform .1s}
+button:hover:not(:disabled){background:var(--soft)}
+button:active:not(:disabled){transform:translateY(1px)}
+button.pri{background:var(--ink); color:#fff}
+button.pri:hover:not(:disabled){background:#333842}
+button.sel{background:var(--ink); color:#fff}
+button.sel:hover:not(:disabled){background:#333842}
+button:disabled{opacity:.35; cursor:default}
+button:focus-visible, input:focus-visible, textarea:focus-visible{outline:3px solid var(--hi); outline-offset:2px}
+.row{display:flex; flex-wrap:wrap; align-items:center; gap:.55rem}
+input[type=number]{font:inherit; font-size:.95rem; width:5em; padding:.38em .5em; border:1.5px solid var(--ink); border-radius:8px}
+input[type=range]{accent-color:var(--hi); width:min(22rem,100%)}
+
+/* tree svg */
+svg.tree{display:block; max-width:100%; height:auto; overflow:visible}
+.dia{overflow-x:auto; overflow-y:hidden; padding:4px 0}
+.nd circle.c{fill:#fff; stroke:var(--ink); stroke-width:2.2}
+.nd text.v{font:700 17px var(--sans); fill:var(--ink); dominant-baseline:central; text-anchor:middle}
+.nd circle.ring{fill:none; stroke:var(--hi); stroke-width:3; opacity:0}
+.nd.cur circle.ring{opacity:1}
+.nd.path circle.c{fill:var(--hi-soft); stroke:var(--hi)}
+.nd.wait circle.c{fill:var(--hi-soft); stroke:var(--hi); stroke-dasharray:4 3}
+.nd.found circle.c, .nd.done circle.c{fill:var(--hi); stroke:var(--hi)}
+.nd.found text.v, .nd.done text.v{fill:#fff}
+.nd.L circle.c{fill:var(--hi-soft); stroke:var(--hi)}
+.nd.R circle.c{fill:var(--am-soft); stroke:var(--am)}
+.nd.am circle.c{fill:var(--am); stroke:var(--am)} .nd.am text.v{fill:#fff}
+.nd.bad circle.c{fill:var(--err-soft); stroke:var(--err); stroke-width:3}
+.nd.bad text.v{fill:var(--err)}
+.nd.ok circle.c{fill:var(--ok); stroke:var(--ok)} .nd.ok text.v{fill:#fff}
+.nd.dim > *{opacity:.22}
+.nd.clk{cursor:pointer}
+.nd.clk:hover circle.c{stroke-width:3.5}
+.eg{stroke:#9aa1ab; stroke-width:2.2}
+.eg.p{stroke:var(--hi); stroke-width:3.2}
+.eg.slot{stroke-dasharray:5 4}
+.slotc{fill:none; stroke:#9aa1ab; stroke-width:2; stroke-dasharray:5 4}
+.slott{font:500 11px var(--mono); fill:var(--muted); text-anchor:middle; dominant-baseline:central}
+.tag{font:700 13px var(--mono); fill:var(--hi); paint-order:stroke; stroke:#fff; stroke-width:5px; stroke-linejoin:round}
+.tag.rt{fill:var(--muted); font-weight:600}
+.tag.am{fill:var(--am)}
+.side{font:600 12px var(--sans); fill:var(--muted); text-anchor:middle; paint-order:stroke; stroke:#fff; stroke-width:4px}
+
+/* step player */
+.pl{display:grid; grid-template-columns:minmax(0,max-content) minmax(0,1fr); gap:1.2rem 2.2rem; align-items:start}
+@media (max-width:900px){.pl{grid-template-columns:minmax(0,1fr)}}
+.pl-side{display:flex; flex-direction:column; gap:.8rem; min-width:0}
+.pl-ctl{display:flex; flex-wrap:wrap; gap:.45rem; align-items:center}
+.pl-count{font-size:.85rem; color:var(--muted); font-variant-numeric:tabular-nums; margin-left:.3rem}
+.pl-note{font-size:1.15rem; line-height:1.4; min-height:2.8em; font-weight:500; margin:0}
+.pl-cmp{font-family:var(--mono); font-size:1.05rem; color:var(--hi); font-weight:700}
+.pl-cmp:empty{display:none}
+.pl-main{display:flex; flex-wrap:wrap; gap:1rem 2rem; align-items:flex-start}
+.pl-main > .dia{flex:0 1 auto; min-width:0; max-width:100%}
+.pl-bot{display:flex; flex-direction:column; gap:1rem; flex:1 1 10rem; min-width:10rem}
+pre.code.long{font-size:.7rem; line-height:1.36}
+.outbox{font-family:var(--mono); font-size:.92rem; margin:0; padding:.55rem .8rem; border:1px solid var(--line); border-radius:8px; min-height:2.4em; white-space:pre-wrap; background:#fff}
+.outbox .new{color:var(--hi); font-weight:700}
+.cstack{display:flex; flex-direction:column; gap:3px; font-family:var(--mono); font-size:.82rem}
+.cstack div{border:1px solid var(--line); border-radius:6px; padding:.15rem .5rem; background:#fff; color:var(--muted)}
+.cstack div:first-child{border-color:var(--hi); background:var(--hi-soft); color:var(--ink); font-weight:700}
+.scen{display:flex; flex-wrap:wrap; gap:.45rem}
+
+/* chips (lists) */
+.chips{display:flex; flex-wrap:wrap; gap:.35rem; align-items:center}
+.chip{min-width:2.35rem; height:2.35rem; display:inline-flex; align-items:center; justify-content:center; border:2px solid var(--ink); border-radius:8px; font-weight:700; font-variant-numeric:tabular-nums; background:#fff; transition:all .25s; padding:0 .3rem; position:relative}
+.chip.cur{border-color:var(--hi); background:var(--hi); color:#fff; transform:translateY(-3px)}
+.chip.seen{background:var(--hi-soft); border-color:var(--hi); color:var(--hi)}
+.chip.dim{opacity:.22}
+.chip.ok{background:var(--ok); border-color:var(--ok); color:#fff}
+.chip.am{background:var(--am-soft); border-color:var(--am); color:var(--am)}
+.chip.bad{background:var(--err-soft); border-color:var(--err); color:var(--err)}
+.chip .mk{position:absolute; bottom:calc(100% + 4px); left:50%; transform:translateX(-50%); font:700 .7rem/1.25 var(--mono); color:var(--hi); white-space:nowrap; display:flex; flex-direction:column; align-items:center}
+.arr{color:#9aa1ab; font-weight:700}
+.chips.ll{gap:.2rem}
+
+/* tables */
+.tw{overflow-x:auto}
+table.t{border-collapse:collapse; font-size:1.05rem}
+table.t th, table.t td{border-bottom:1px solid var(--line); padding:.6rem 1rem; text-align:left; vertical-align:top}
+table.t th{font-size:.76rem; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:700}
+table.t td:last-child{min-width:14rem}
+#bsChips{flex-wrap:nowrap; overflow-x:auto; padding-top:2.7rem; margin-top:0 !important}
+table.t td.o{font-family:var(--mono); font-weight:700; white-space:nowrap}
+table.t td.o.g{color:var(--hi)} table.t td.o.b{color:var(--err)}
+
+/* misc */
+.howto{display:grid; grid-template-columns:max-content minmax(0,1fr); gap:.8rem 1rem; align-items:center; font-size:1.1rem; max-width:62ch}
+.howto > div{display:contents}
+.key{display:inline-block; min-width:2.2em; text-align:center; border:1.5px solid var(--ink); border-radius:6px; padding:.12em .55em; font-size:1rem; font-weight:700}
+.key.pri{background:var(--ink); color:#fff}
+.msg{font-size:1.15rem; font-weight:600; min-height:1.6em}
+.msg.bad{color:var(--err)} .msg.good{color:var(--ok)}
+.trio{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:1rem}
+@media (max-width:860px){.trio{grid-template-columns:minmax(0,1fr)}}
+.trio .card h3{margin:0 0 .3rem; font-size:1.08rem}
+.trio .card p{font-size:1rem}
+.legend{display:flex; flex-wrap:wrap; gap:1rem; font-size:.95rem; color:var(--muted)}
+.legend span::before{content:""; display:inline-block; width:.9em; height:.9em; border-radius:50%; margin-right:.4em; vertical-align:-.1em; border:2px solid var(--ink)}
+.legend .l-L::before{background:var(--hi-soft); border-color:var(--hi)}
+.legend .l-R::before{background:var(--am-soft); border-color:var(--am)}
+.legend .l-am::before{background:var(--am); border-color:var(--am)}
+.legend .l-done::before{background:var(--hi); border-color:var(--hi)}
+.legend .l-wait::before{background:var(--hi-soft); border-color:var(--hi); border-style:dashed}
+.legend .l-cur::before{box-shadow:0 0 0 2px #fff, 0 0 0 4px var(--hi)}
+.pair{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:1.5rem 2.5rem}
+@media (max-width:860px){.pair{grid-template-columns:minmax(0,1fr)}}
+.stat{font-size:1.05rem}
+.stat b{font-variant-numeric:tabular-nums}
+.levels{display:flex; flex-direction:column; gap:3px; font-family:var(--mono); font-size:.82rem}
+.levels .lv{display:grid; grid-template-columns:5.5em minmax(0,1fr) 9em; align-items:center; gap:.6rem}
+.levels .bar{height:12px; background:var(--hi); border-radius:3px; min-width:3px; transition:width .3s}
+.memnode{display:inline-grid; grid-template-columns:repeat(3, auto); border:2px solid var(--ink); border-radius:8px; overflow:hidden; font-family:var(--mono); font-size:.95rem}
+.memnode span{padding:.45rem .8rem; border-right:2px solid var(--ink)}
+.memnode span:last-child{border-right:0}
+.memnode span.v{font-weight:700; background:var(--hi-soft)}
+
+/* editor */
+textarea.ed{width:100%; font-family:var(--mono); font-size:.8rem; line-height:1.5; border:1.5px solid var(--ink); border-radius:10px; padding:.7rem .9rem; white-space:pre; overflow:auto; resize:vertical; tab-size:4; background:#fff; color:var(--ink)}
+.pgcols{grid-template-columns:minmax(0,1fr) minmax(0,1.1fr)}
+#pgEd{height:56vh}
+@media (max-width:860px){.pgcols{grid-template-columns:minmax(0,1fr)} #pgEd{height:42vh}}
+.err{color:var(--err)}
+
+/* nav */
+.nav{border-top:1px solid var(--line); display:flex; align-items:center; gap:.6rem; padding:.45rem 16px calc(.45rem + env(safe-area-inset-bottom, 0px)); position:relative; background:#fff}
+.nav .prog{position:absolute; left:0; top:-1px; height:2px; background:var(--hi); transition:width .3s}
+.nav .cnt{font-variant-numeric:tabular-nums; font-size:.92rem; min-width:4.5em; text-align:center}
+.nav button{font-size:1.15rem; line-height:1; padding:.3em .85em}
+.nav .ttl{flex:1; font-size:.85rem; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+@media (max-width:600px){
+  svg.tree{max-width:none; width:max(min(100%, calc(var(--w) * 1px)), calc(var(--w) * .62px)) !important}
+  h1{font-size:1.75rem} h1.big{font-size:2.4rem}
+  .nav{justify-content:space-between} .nav .ttl{display:none}
+  .nav button{font-size:22px; padding:4px 22px; min-height:40px}
+}
+@media (prefers-reduced-motion: reduce){.slide.on{animation:none}}
+
+/* graph svg */
+svg.graph{display:block; max-width:100%; height:auto; overflow:visible}
+svg.graph .nd, svg.graph .eg, svg.graph .tag, svg.graph .rowl{transition:opacity .35s}
+svg.graph .nd circle.c{transition:fill .25s, stroke .25s}
+svg.graph .eg{transition:opacity .35s, stroke .25s, stroke-width .25s}
+svg.graph .off{opacity:0; pointer-events:none}
+.eg.u{stroke:#8fb0ee; stroke-width:3}
+.eg.chk{stroke:var(--am); stroke-width:3.2}
+.eg.dim{opacity:.25}
+.nd.chk circle.ring{opacity:1; stroke:var(--am); stroke-dasharray:5 4}
+.nd.done.wait circle.c{fill:var(--hi-soft); stroke:var(--hi); stroke-dasharray:4 3}
+.nd.done.wait text.v{fill:var(--ink)}
+.nd text.sub{font:600 12px var(--sans); fill:var(--muted); text-anchor:middle; paint-order:stroke; stroke:#fff; stroke-width:4px}
+.rowl{font:600 12px var(--sans); fill:var(--muted)}
+.legend .l-chk::before{background:#fff; border-color:var(--am); border-style:dashed}
+
+/* panels */
+.chips.sm .chip{min-width:1.9rem; height:1.9rem; font-size:.9rem; border-width:1.5px}
+.chips.sm{min-height:1.9rem}
+.adj{align-self:flex-start; font-family:var(--mono); font-size:.92rem; display:flex; flex-direction:column; gap:3px}
+.adj div{border:1px solid var(--line); border-radius:6px; padding:.2rem .6rem; background:#fff; transition:background .2s, border-color .2s; white-space:nowrap}
+.adj div.on{border-color:var(--hi); background:var(--hi-soft)}
+.adj b{color:var(--hi)}
+.adj.clk div{cursor:pointer}
+.pl-bot .lbl{margin-bottom:.3rem}
+.cstack .more{border-style:dashed; text-align:center}
+.cstack .boom{border-color:var(--err) !important; background:var(--err-soft) !important; color:var(--err) !important; font-weight:700}
+input[type=text]{font:inherit; font-size:.95rem; width:4em; padding:.38em .5em; border:1.5px solid var(--ink); border-radius:8px}
+.trio .card .dia{margin-top:.6rem}
+#pgEd{height:60vh}
+
+/* ===== sorting deck ===== */
+.pl.nocode{grid-template-columns:minmax(0,1fr)}
+.pl-body{display:flex; flex-direction:column; gap:.9rem; min-width:0}
+.cells{display:inline-flex; gap:.3rem; align-items:flex-end}
+.cell{display:flex; flex-direction:column; align-items:center; gap:3px}
+.cell .mk2{font:700 .72rem/1.2 var(--mono); color:var(--hi); min-height:var(--mkh, 1.3em); display:flex; flex-direction:column; justify-content:flex-end; align-items:center; white-space:nowrap}
+.cell .mk2 .a{color:var(--am)}
+.cell .ix{font:500 .7rem var(--mono); color:var(--muted)}
+.cells.clk .cell{cursor:pointer}
+.cells.sm .chip{min-width:1.9rem; height:1.9rem; font-size:.9rem; border-width:1.5px}
+.cells.xs{gap:.2rem}
+.cells.xs .chip{min-width:1.62rem; height:1.62rem; font-size:.78rem; border-width:1.5px; border-radius:6px; padding:0 .15rem}
+.chip.pv{background:var(--ink); color:#fff}
+.chip.gap{border-style:dashed; border-color:#c5c9d0; color:transparent}
+.chip.cur{transform:none}
+.arow{display:flex; flex-direction:column; gap:.15rem; min-width:0}
+.arow .lbl{margin:0}
+.otag{font-family:var(--mono); font-weight:700; color:var(--hi); font-size:1.05rem}
+.trio .card{display:flex; flex-direction:column; gap:.55rem}
+.trio .card h3{margin:0}
+.legend .l-ok::before{background:var(--ok); border-color:var(--ok)}
+.legend .l-pv::before{background:var(--ink)}
+.legend .l-sm::before{background:var(--hi-soft); border-color:var(--hi)}
+.legend .l-bg::before{background:var(--am-soft); border-color:var(--am)}
+.legend .l-off::before{opacity:.3}
+.legend.sq span::before{border-radius:3px}
+
+/* rows of groups (merge sort, quicksort) */
+.qrows{display:flex; flex-direction:column; gap:.3rem; align-items:flex-start}
+.qrow{display:flex; align-items:center; transition:opacity .3s}
+.qrow.off{opacity:0}
+.qrow .rl{width:4.2rem; font-size:.74rem; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); font-weight:700}
+.qc{width:2.7rem; height:2.7rem; display:flex; align-items:center; justify-content:center}
+.qg{position:relative}
+.qg::before{content:""; position:absolute; inset:3px; border:2px solid #9aa1ab; background:var(--soft); border-radius:10px; pointer-events:none}
+.qg .qc{position:relative}
+.qrows .chip{min-width:1.9rem; height:1.9rem; font-size:.9rem; border-width:1.5px}
+.qrows.tight .qc{width:2.35rem; height:2.35rem}
+.qrows.tight .chip{min-width:1.62rem; height:1.62rem; font-size:.78rem; border-radius:6px}
+
+/* call tree (merge sort code) */
+.ctree{display:grid; grid-template-columns:repeat(4, 3.3rem); gap:1.1rem .5rem; justify-content:start; justify-items:center}
+.cn{display:flex; gap:.2rem; padding:.3rem; border-radius:10px; border:1.5px solid var(--line); background:#fff; transition:all .25s}
+.cn .chip{min-width:1.9rem; height:1.9rem; font-size:.9rem; border-width:1.5px}
+.cn.none{visibility:hidden}
+.cn.cur{border-color:var(--hi); background:var(--hi-soft); box-shadow:0 0 0 3px #fff, 0 0 0 5px var(--hi)}
+.cn.wait{border-color:var(--hi); border-style:dashed; background:var(--hi-soft)}
+
+/* bars */
+.bars{display:flex; align-items:flex-end; gap:2px; height:8.5rem}
+.bars i{flex:1; background:#c9ced6; border-radius:2px 2px 0 0; min-width:2px}
+.bars i.c{background:var(--am)}
+.bars i.d{background:var(--hi)}
+#titleBars{height:11rem; max-width:34rem}
+.race{display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:1.2rem 1.6rem}
+@media (max-width:860px){.race{grid-template-columns:repeat(2, minmax(0,1fr))}}
+.race .bars{height:7.5rem}
+.race h3{margin:0; font-size:1.05rem}
+.race .stat{font-size:.95rem; color:var(--muted)}
+.race .stat b{color:var(--ink)}
+.race .fin{color:var(--ok); font-weight:700}
+
+.formula{font-family:var(--mono); font-size:.98rem; display:grid; grid-template-columns:max-content max-content; gap:.3rem 1.2rem}
+.formula b{color:var(--hi)}
+.formula .p b{color:var(--am)}
+.nd.P circle.c{fill:var(--am-soft); stroke:var(--am)}
+.nd.off2 > *{opacity:.2}
+table.t.cmp td:last-child{min-width:16rem}
+table.t.cmp td.o{font-size:1rem}
+#pgList{width:min(20rem,100%); text-transform:none}
+#pgEd{height:58vh}
+.levels .lv{grid-template-columns:11em minmax(0,1fr) 9.5em}
+.levels .lv.sel-row .bar{background:var(--am)}
+.passes{display:flex; flex-direction:column; gap:3px; font-family:var(--mono); font-size:.8rem; max-width:26rem}
+.passes .lv{display:grid; grid-template-columns:5.2em minmax(0,1fr); align-items:center; gap:.6rem}
+.passes .bar{height:11px; background:var(--hi); border-radius:3px; min-width:3px}
+.passes .barw{display:flex; align-items:center; gap:.45rem}
+.big-num.sm{font-size:1.9rem}
+.card .sub{font-size:.95rem; color:var(--muted); margin-top:.15rem}
+
+pre.code, textarea.ed, code{font-variant-ligatures:none}
+.try{display:flex; flex-direction:column; gap:.9rem; min-width:0}
+.try .msg{font-weight:500; min-height:3.2em; max-width:62ch; margin:0}
+.try .msg.bad{color:var(--err)} .try .msg.good{color:var(--ok)}
+.cells.clk .cell:hover .chip:not(.dim):not(.ok){border-color:var(--hi)}
+.sumline{font-family:var(--mono); font-size:1.15rem; font-weight:700; color:var(--hi); min-height:1.5em}
+.sumline span{color:var(--muted); font-weight:500}
+.pl-note{max-width:60ch}
+ol.steps{margin:0; padding-left:1.45em; font-size:1.1rem; line-height:1.5; max-width:66ch; display:flex; flex-direction:column; gap:.3rem}
+ol.steps li::marker{color:var(--hi); font-weight:700}
+ul.pts.small{font-size:.95rem; color:var(--muted)}
+ul.pts.small b{color:var(--ink)}
+p.do{font-weight:600}
+.pl-note ul, #qpCap ul{margin:0; padding-left:1.15em; display:flex; flex-direction:column; gap:.3rem}
+.pl-note li::marker, #qpCap li::marker{color:var(--hi)}
+#qpCap{font-size:1.1rem; line-height:1.5}
+.pl-note{min-height:5.2em}
+.try .msg{min-height:2.9em}
+.pl-note{min-height:3.6em}
+.race{grid-template-columns:repeat(5, minmax(0,1fr)); gap:1.2rem 1.2rem}
+@media (max-width:980px){.race{grid-template-columns:repeat(2, minmax(0,1fr))}}
+.cell .mk2 span::after{content:"\25BC"; display:block; font-size:.62em; line-height:1; margin-top:1px}
+
+table.t.sum td{padding-block:.7rem} table.t.sum td:nth-child(2){font-family:var(--sans, inherit); font-weight:400}
+table.t.sum td:last-child{min-width:0}
+@media (max-width:600px){ table.t.sum th, table.t.sum td{padding:.55rem .4rem; font-size:.84rem} table.t.sum th{font-size:.66rem} }
+
+/* ===== hash tables deck ===== */
+.ht{display:inline-flex; flex-direction:column; gap:.3rem; font-family:var(--mono); font-size:.92rem}
+.ht.mk{gap:1.25rem; padding-top:1.1rem}
+.hrow{display:flex; align-items:center; gap:.4rem; min-height:2.15rem; white-space:nowrap}
+.hix{width:1.5em; text-align:right; color:var(--muted); font-size:.76rem; font-weight:500}
+.hb{width:2.15rem; height:2.15rem; flex:none; border:2px solid #c5c9d0; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; background:#fff; transition:all .25s}
+.hb.full{border-color:var(--ink)}
+.hb.full::after{content:""; width:.5rem; height:.5rem; border-radius:50%; background:var(--ink)}
+.hrow.on .hb{border-color:var(--hi); background:var(--hi-soft)}
+.hrow.on .hb.full::after{background:var(--hi)}
+.hrow.on .hix{color:var(--hi); font-weight:700}
+.hrow.bad .hb{border-color:var(--err); background:var(--err-soft)}
+.hrow.bad .hix{color:var(--err); font-weight:700}
+.hrow.ok .hb{border-color:var(--ok); background:var(--ok-soft)}
+.hrow.dim{opacity:.3}
+.harr{color:#9aa1ab; font-weight:700; font-size:1.15em; line-height:1}
+.hn{position:relative; display:inline-flex; border:2px solid var(--ink); border-radius:8px; background:#fff; transition:all .25s}
+.hn b{padding:.26rem .55rem; font-weight:700}
+.hn i{font-style:normal; padding:.26rem .5rem; border-left:2px solid var(--ink); background:var(--soft); border-radius:0 6px 6px 0; font-variant-numeric:tabular-nums; transition:all .25s}
+.hn.cur{border-color:var(--hi); background:var(--hi-soft)} .hn.cur i{border-color:var(--hi)}
+.hn.ok{border-color:var(--ok); background:var(--ok-soft)} .hn.ok i{border-color:var(--ok); background:var(--ok); color:#fff}
+.hn.new{border-color:var(--am); background:var(--am-soft)} .hn.new i{border-color:var(--am)}
+.hn.bad{border-color:var(--err); background:var(--err-soft); color:var(--err)} .hn.bad i{border-color:var(--err)}
+.hn.prev{border-style:dashed}
+.hn.dim{opacity:.25}
+.hmk{position:absolute; bottom:calc(100% + 3px); left:50%; transform:translateX(-50%); font:700 .7rem/1.2 var(--mono); color:var(--hi); white-space:nowrap}
+.hmk::after{content:"\25BC"; display:block; font-size:.62em; line-height:1; text-align:center}
+.hmk.p{color:var(--muted)}
+.hnone{position:relative; color:var(--muted); font-size:.82rem; padding:0 .2rem}
+.ht.sm{font-size:.8rem; gap:.2rem}
+.ht.sm .hrow{min-height:1.7rem; gap:.3rem}
+.ht.sm .hb{width:1.7rem; height:1.7rem; border-radius:6px; border-width:1.5px}
+.ht.sm .hn{border-width:1.5px; border-radius:6px}
+.ht.sm .hn b{padding:.12rem .4rem} .ht.sm .hn i{padding:.12rem .38rem; border-left-width:1.5px; border-radius:0 4px 4px 0}
+.vars{font-family:var(--mono); font-size:.92rem; color:var(--muted); min-height:1.5em}
+.vars b{color:var(--ink)}
+.tabs2{display:flex; flex-wrap:wrap; gap:1rem 2.6rem; align-items:flex-start}
+input.word{width:8em; text-transform:none; font-family:var(--mono)}
+input.word.wide{width:min(22rem,100%)}
+.pipe{display:flex; flex-wrap:wrap; align-items:center; gap:.6rem; font-family:var(--mono); font-size:1.05rem; min-height:2.6rem}
+.pipe .pk{font-weight:700; min-width:3.2em}
+.pipe .pf{border:2px solid var(--ink); border-radius:8px; padding:.35rem .8rem; font-family:var(--sans); font-weight:600; font-size:.95rem; background:var(--soft)}
+.pipe .pi{font-weight:700; color:var(--hi); font-size:1.3rem; min-width:1em}
+.ltrs{display:inline-flex; align-items:flex-start; gap:.5rem; min-height:4.4rem}
+.ltrs .lt{display:flex; flex-direction:column; align-items:center; gap:.3rem}
+.ltrs .lt span{font:600 .95rem var(--mono); color:var(--hi)}
+.ltrs .pl2{align-self:flex-end; font:600 .95rem var(--mono); color:var(--muted)}
+.cap{font-size:1.05rem; line-height:1.5; min-height:6.5em}
+.cap ul{margin:0; padding-left:1.15em; display:flex; flex-direction:column; gap:.3rem}
+.cap li::marker{color:var(--hi)}
+.lfg{display:inline-flex; flex-direction:column; gap:3px; font-family:var(--mono)}
+.lfg .r{display:flex; align-items:center; gap:3px; height:.86rem}
+.lfg.few .r{height:1.25rem}
+.lfg .ix{width:1.6em; text-align:right; font-size:.68rem; color:var(--muted); margin-right:3px}
+.lfg .r i{width:.86rem; height:100%; border-radius:3px; background:var(--hi)}
+.lfg.few .r i{width:1.25rem}
+.lfg .r i.e{background:none; border:1.5px solid #c5c9d0}
+table.t.all td.o span{font-family:var(--sans); font-weight:400; color:var(--muted); font-size:.9rem}
+table.t.all td:last-child, table.t td:last-child{min-width:0}
+@media (max-width:600px){ table.t.all th, table.t.all td{padding:.5rem .4rem; font-size:.84rem} table.t.all th{font-size:.64rem} }
+#pgEd{height:58vh}
+.pl-note{min-height:3.6em}
+#tiLine{min-height:1.5em}
+#tiTab{min-height:19.3rem}
+
+table.t.num td{font-variant-numeric:tabular-nums}
+table.t.num td.g{color:var(--ok); font-weight:700}
+table.t.tight th, table.t.tight td{padding:.32rem .8rem}
+
+/* ===== v6: forms and whitespace ===== */
+.slide{padding-block:2rem 2rem}
+.slide.on{gap:1.6rem}
+p{max-width:56ch}
+ul.pts, ol.steps{gap:.8rem; max-width:54ch}
+.stack{gap:1.6rem}
+.cols{gap:2rem 4.5rem}
+.try{gap:1.15rem}
+table.t th, table.t td{padding:.75rem 2.2rem .75rem 0}
+table.t.tight th, table.t.tight td{padding:.4rem 2.2rem .4rem 0}
+table.t td code{white-space:nowrap}
+.formula{font-family:var(--mono); font-size:1.3rem; font-weight:700}
+.arr{display:inline-flex; align-items:flex-start; gap:.7rem; font-family:var(--mono)}
+.arr .an{line-height:3.5rem; font-weight:600; font-size:.95rem}
+.arr .ac{display:flex; padding-left:2px}
+.arr .a1{display:flex; flex-direction:column; align-items:center; gap:.3rem}
+.arr .av{min-width:4rem; height:3.5rem; margin-left:-2px; border:2px solid var(--ink); background:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0 .5rem; transition:all .25s}
+.arr .a1:first-child .av{border-radius:8px 0 0 8px} .arr .a1:last-child .av{border-radius:0 8px 8px 0}
+.arr{color:var(--ink)} .arr .av b{font-size:1rem; font-weight:700} .arr .av i{font-style:normal; font-size:.88rem}
+.arr .ix{font-size:.74rem; color:var(--muted)}
+.arr .a1.cur .av{border-color:var(--hi); background:var(--hi-soft); position:relative; z-index:1}
+.arr .a1.ok .av{border-color:var(--ok); background:var(--ok-soft); position:relative; z-index:1}
+.arr .a1.dim .av b, .arr .a1.dim .av i{opacity:.3}
+.arr .a1.cur .ix, .arr .a1.ok .ix{font-weight:700; color:var(--ink)}
+.ht.flat{gap:0; padding-top:2px}
+.ht.flat .hrow{min-height:0}
+.hf{width:7.5rem; height:2.3rem; margin-top:-2px; border:2px solid var(--ink); background:#fff; display:flex; align-items:center; justify-content:space-between; padding:0 .7rem; transition:all .25s}
+.ht.flat .hrow:first-child .hf{border-radius:8px 8px 0 0} .ht.flat .hrow:last-child .hf{border-radius:0 0 8px 8px}
+.hf i{font-style:normal; color:var(--muted)}
+.hrow.on .hf, .hf.new{border-color:var(--hi); background:var(--hi-soft); position:relative; z-index:1}
+.hrow.ok .hf, .hf.ok{border-color:var(--ok); background:var(--ok-soft); position:relative; z-index:1}
+.hrow.bad .hf, .hf.bad{border-color:var(--err); background:var(--err-soft); position:relative; z-index:1}
+.ht:not(.sm):not(.flat) .hb:not(.full)::after{content:"None"; font:500 .56rem var(--mono); color:#9aa1ab}
+.flow{display:flex; align-items:flex-start; gap:.9rem; font-family:var(--mono); font-size:1.05rem; min-height:4rem}
+.flow .harr{line-height:2.5rem}
+.flow .fs{display:flex; flex-direction:column; align-items:center; gap:.4rem; min-width:3rem}
+.flow .fs > span:first-child{height:2.5rem; display:inline-flex; align-items:center}
+.flow .pk{font-weight:700} .flow .pi{font-weight:700; color:var(--hi); font-size:1.3rem}
+.flow .pf{border:2px solid var(--ink); border-radius:8px; padding:0 .9rem; font-family:var(--sans); font-weight:600; font-size:.95rem; background:var(--soft)}
+.flow .lbl{margin:0}
+.ltrs .lt.lab{align-items:flex-end; margin-right:.3rem}
+.ltrs .lt.lab span{height:2.35rem; display:flex; align-items:center; font:500 .78rem var(--mono); color:var(--muted)}
+.ltrs .lt.lab span:last-child{height:auto}
+
+.arr .al{display:flex; flex-direction:column; align-items:flex-end; gap:.3rem}
+.arr .alt{height:3.5rem; display:flex; flex-direction:column; justify-content:center; align-items:flex-end; font-size:.8rem; color:var(--muted); line-height:1.35}
+.arr .alt b{font-size:.95rem; color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="deck">
+<main class="stage" id="stage">
+
+<section class="slide" data-title="Start">
+  <h1 class="big">Hash Tables</h1>
+  <div class="sumline" id="tiLine"></div>
+  <div class="dia"><div id="tiTab"></div></div>
+  <div class="howto">
+    <div><span><span class="key">&larr;</span> <span class="key">&rarr;</span></span><span>Move between slides</span></div>
+    <div><span class="key pri">Step</span><span>Run the code line by line</span></div>
+    <div><span class="key">Play</span><span>Run the code on its own</span></div>
+  </div>
+</section>
+
+<section class="slide" data-title="Searching a list">
+  <h1>Searching a list</h1>
+  <p>A cafe keeps its menu in a list, where each item is a name and a price</p>
+  <pre class="code" id="cMenu"></pre>
+  <ul class="pts">
+    <li>To find the price of "oat", we have to check each item from index 0 until we reach it</li>
+    <li>"oat" is last, so it takes 7 checks, and a list with n items can take n checks, which makes this search O(n)</li>
+  </ul>
+  <div class="try">
+    <p class="do">Pick a name to search for</p>
+    <div class="row" id="s2Btns"></div>
+    <div class="dia"><div id="s2List"></div></div>
+    <div class="stat" id="s2LC">&nbsp;</div>
+  </div>
+</section>
+
+<section class="slide" data-title="Looking up by index">
+  <h1>Looking up an item by index</h1>
+  <p><code>menu[6]</code> gets the item at index 6 without checking the items before it, because a list knows where every index is</p>
+  <div class="try">
+    <p class="do">Pick an index</p>
+    <div class="row" id="s3iBtns"></div>
+    <div class="dia"><div id="s3iList"></div></div>
+    <div class="stat" id="s3iC">&nbsp;</div>
+  </div>
+  <div class="tw"><table class="t">
+    <thead><tr><th>Lookup</th><th>Checks</th><th>Time</th></tr></thead>
+    <tbody>
+      <tr><td>By name, like "oat"</td><td>Up to n</td><td class="o">O(n)</td></tr>
+      <tr><td>By index, like <code>menu[6]</code></td><td>None</td><td class="o g">O(1)</td></tr>
+    </tbody>
+  </table></div>
+  <ul class="pts">
+    <li>Searching by name is slow only because we don't know which index the name is at</li>
+    <li>If we could calculate the index from the name, we wouldn't have to search</li>
+  </ul>
+</section>
+
+<section class="slide" data-title="The idea">
+  <h1>Calculating the index from the key</h1>
+  <div class="cols">
+    <div class="stack">
+      <div class="tw"><table class="t">
+        <tbody>
+          <tr><td><b>Hash table</b></td><td>A list that stores each item at an index calculated from its name</td></tr>
+          <tr><td><b>Key</b></td><td>The name, like "tea"</td></tr>
+          <tr><td><b>Hash function</b></td><td>The calculation that turns a key into an index</td></tr>
+          <tr><td><b>Bucket</b></td><td>One position in the list</td></tr>
+        </tbody>
+      </table></div>
+      <ul class="pts">
+        <li>To store a key, we calculate its index and put it in that bucket</li>
+        <li>To find it later, we calculate the same index and look in that bucket, so nothing is searched</li>
+      </ul>
+    </div>
+  <div class="try">
+    <p class="do">Pick a key to store</p>
+    <div class="row" id="s3Btns"></div>
+    <div class="flow">
+      <div class="fs"><span class="pk" id="s3Key"></span><span class="lbl">key</span></div>
+      <span class="harr">&rarr;</span>
+      <div class="fs"><span class="pf">hash function</span></div>
+      <span class="harr">&rarr;</span>
+      <div class="fs"><span class="pi" id="s3Idx"></span><span class="lbl">index</span></div>
+    </div>
+    <div class="dia"><div id="s3Tab"></div></div>
+  </div>
+  </div>
+</section>
+
+<section class="slide" data-title="Key to number">
+  <h1>Turning a key into a number</h1>
+  <div class="cols">
+    <div class="stack">
+      <p>An index is a number and a key is text, so the first step is to turn the key into a number</p>
+      <ul class="pts">
+        <li>Python stores every character as a number, and <code>ord</code> returns that number, so <code>ord("a")</code> is 97 and <code>ord("b")</code> is 98</li>
+        <li>To turn a whole key into one number, we add up the numbers of its letters</li>
+        <li>For "tea" that is 116 + 101 + 97, which is 314</li>
+      </ul>
+      <pre class="code" id="cSum"></pre>
+      <p>total starts at 0, and the loop adds the number of each letter in the key</p>
+    </div>
+    <div class="try">
+      <p class="do"><label for="s4In">Type a key</label></p>
+      <div class="row"><input type="text" class="word" id="s4In" value="tea" maxlength="8" autocomplete="off" spellcheck="false"></div>
+      <div class="dia"><div class="ltrs" id="s4Ltrs"></div></div>
+      <div class="sumline" id="s4Sum"></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-title="Number to index">
+  <h1>Fitting the number into the list</h1>
+  <div class="cols">
+    <div class="stack">
+      <ul class="pts">
+        <li>314 is too big to be an index in a list of 8 buckets</li>
+        <li><code>%</code> gives the remainder of a division, and since 314 &divide; 8 is 39 with 2 left over, <code>314 % 8</code> is 2</li>
+        <li>A remainder after dividing by 8 is always 0 to 7, so it's always a valid index</li>
+        <li>"tea" gets index 2 every time, which is how we find it again</li>
+      </ul>
+      <pre class="code" id="cHash"></pre>
+    </div>
+    <div class="try">
+      <p class="do"><label for="s5In">Type a key</label></p>
+      <div class="row"><input type="text" class="word" id="s5In" value="tea" maxlength="8" autocomplete="off" spellcheck="false"></div>
+      <div class="sumline" id="s5Sum"></div>
+      <div class="dia"><div id="s5Tab"></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-title="put and get">
+  <h1>put and get</h1>
+  <div class="cols">
+    <div class="stack">
+      <p>From here on the menu is a hash table instead of a list, and each bucket stores a pair made of a <b>key</b> (the name) and its <b>value</b> (the price)</p>
+      <div class="tw"><table class="t">
+        <tbody>
+          <tr><td><code>put(key, value)</code></td><td>Calculates the key's index and stores the pair in that bucket</td></tr>
+          <tr><td><code>get(key)</code></td><td>Calculates the key's index and returns the value in that bucket</td></tr>
+        </tbody>
+      </table></div>
+      <p>Calculating a key's index is called <b>hashing</b> the key</p>
+    </div>
+    <div id="sfPl"></div>
+  </div>
+</section>
+
+<section class="slide" data-title="Collisions">
+  <h1>Collisions</h1>
+  <div class="cols">
+    <div class="stack">
+      <p>"pie" and "ham" add up to different numbers, but both leave a remainder of 6</p>
+      <div>
+        <div class="sumline">"pie" <span>&rarr;</span> 318 % 8 <span>=</span> 6</div>
+        <div class="sumline">"ham" <span>&rarr;</span> 310 % 8 <span>=</span> 6</div>
+      </div>
+      <ul class="pts">
+        <li>Two keys with the same index is a <b>collision</b></li>
+        <li>Collisions can't be avoided, because there are endless possible keys and only 8 buckets</li>
+        <li>If "ham" replaced "pie" we would lose the price of pie, so a bucket has to hold more than one pair</li>
+      </ul>
+    </div>
+    <div class="try">
+      <p class="do">Pick a key to add</p>
+      <div class="row" id="coBtns"></div>
+      <div class="sumline" id="coSum"></div>
+      <div class="dia"><div id="coTab"></div></div>
+      <p class="msg" id="coMsg"></p>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-title="Chaining">
+  <h1>Chaining</h1>
+  <div class="cols">
+    <div class="stack">
+      <p><b>Chaining</b> makes each bucket a linked list, so it can hold any number of pairs</p>
+      <ul class="pts">
+        <li>The bucket does the job of head by holding the first node of its list, or <code>None</code> when the list is empty</li>
+        <li>Keys that collide become nodes in the same list</li>
+        <li>To find a key, we go to its bucket and search only that list</li>
+      </ul>
+      <div><div class="lbl">A node</div><div class="memnode"><span class="v">key</span><span class="v">value</span><span>next</span></div></div>
+    </div>
+    <div id="chPl"></div>
+  </div>
+</section>
+
+<section class="slide" data-title="Node and HashTable">
+  <h1>Node and HashTable</h1>
+  <p>Press Next to build the code in pieces</p>
+  <div id="setBuild"></div>
+</section>
+
+<section class="slide" data-title="put: writing it">
+  <h1>put: writing the code</h1>
+  <ol class="steps">
+    <li>Hash the key to find its bucket</li>
+    <li>Search that bucket's list, and change the value if the key is already there</li>
+    <li>If it isn't there, add a new node at the head of the list</li>
+  </ol>
+  <div id="putBuild"></div>
+</section>
+
+<section class="slide" data-title="put: running it">
+  <h1>put: running the code</h1>
+  <div class="tw"><table class="t">
+    <tbody>
+      <tr><td><code>index</code></td><td>The bucket that the key hashes to</td></tr>
+      <tr><td><code>current</code></td><td>The node being checked</td></tr>
+    </tbody>
+  </table></div>
+  <div class="row"><span class="scen" id="putSc"></span></div>
+  <div id="putPl"></div>
+</section>
+
+<section class="slide" data-title="get">
+  <h1>get</h1>
+  <ol class="steps">
+    <li>Hash the key and start at the head of its bucket's list</li>
+    <li>Compare each node's key with the key, since different keys can share a bucket</li>
+    <li>Return the value when a key matches</li>
+    <li>Return None if the list ends, since the key can't be in any other bucket</li>
+  </ol>
+  <div class="row"><span class="scen" id="getSc"></span></div>
+  <div id="getPl"></div>
+</section>
+
+<section class="slide" data-title="remove">
+  <h1>remove</h1>
+  <div class="cols">
+    <div class="stack">
+      <p>remove searches the list with prev one node behind current, and what it does next depends on where the key is</p>
+      <div class="row"><span class="scen" id="remSc"></span></div>
+    </div>
+    <div class="tw"><table class="t tight">
+      <thead><tr><th>Where the key is</th><th>What remove does</th></tr></thead>
+      <tbody>
+        <tr><td>At the head of the list</td><td>Points the bucket at <code>current.next</code></td></tr>
+        <tr><td>Later in the list</td><td>Sets <code>prev.next = current.next</code></td></tr>
+        <tr><td>Not in the table</td><td>Prints a message</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+  <div id="remPl"></div>
+</section>
+
+<section class="slide" data-title="Time complexity">
+  <h1>Time complexity</h1>
+  <div class="cols">
+    <div class="stack">
+      <p>put, get and remove all do the same three steps, where n is the number of keys in the table</p>
+      <div class="tw"><table class="t">
+        <thead><tr><th>Step</th><th>Time</th></tr></thead>
+        <tbody>
+          <tr><td>Hash the key</td><td><b>O(1)</b>, since it depends on the length of the key and not on n</td></tr>
+          <tr><td>Go to its bucket</td><td><b>O(1)</b>, since it is a lookup by index</td></tr>
+          <tr><td>Search that bucket's list</td><td>Depends on its length</td></tr>
+        </tbody>
+      </table></div>
+      <p>With as many buckets as keys, each list has about 1 node, so all three are <b>O(1) on average</b></p>
+    </div>
+    <div class="stack">
+      <div>
+        <div class="lbl">1,000 keys, spread evenly</div>
+        <div class="tw"><table class="t num">
+          <thead><tr><th>Buckets</th><th>Nodes per list</th><th>Checks to find a key</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>1,000</td><td>Up to 1,000</td></tr>
+            <tr><td>8</td><td>125</td><td>Up to 125</td></tr>
+            <tr><td>100</td><td>10</td><td>Up to 10</td></tr>
+            <tr><td>1,000</td><td>1</td><td class="g">About 1</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-title="Load factor">
+  <h1>Load factor</h1>
+  <div class="cols">
+    <div class="stack">
+      <div class="formula">load factor = keys &divide; buckets</div>
+      <ul class="pts">
+        <li>The load factor is the average length of a list</li>
+        <li>At 1 or below, the lists are short and the table is fast</li>
+        <li>Every new key raises it, so the table slows down unless it adds buckets</li>
+      </ul>
+    </div>
+    <div class="try">
+      <div class="row"><label for="lfKeys">Keys</label><input type="range" id="lfKeys" min="0" max="48" value="8"><b id="lfN"></b></div>
+      <div class="row"><span>Buckets</span><span class="scen" id="lfB"></span></div>
+      <div class="sumline" id="lfSub"></div>
+      <div><div class="lbl">Nodes in each bucket's list</div><div class="dia"><div class="lfg" id="lfG"></div></div></div>
+      <p class="msg" id="lfMsg"></p>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-title="Resizing">
+  <h1>Resizing</h1>
+  <div class="cols">
+    <div class="stack">
+      <p>put ends by checking if there are more keys than buckets</p>
+      <pre class="code" id="cRs"></pre>
+    </div>
+    <div class="stack">
+      <p>resize does two things</p>
+      <ol class="steps">
+        <li>Makes a new list with twice as many buckets</li>
+        <li>Puts every key into the new list</li>
+      </ol>
+    </div>
+  </div>
+  <div id="rsPl"></div>
+</section>
+
+<section class="slide" data-title="Watch Out!">
+  <h1>Watch Out!</h1>
+  <div class="cols">
+    <div class="stack">
+      <ul class="pts">
+        <li>resize has to hash every key again, because <code>% 16</code> gives most keys a different index than <code>% 8</code> did</li>
+        <li>If each bucket were copied to the same index, get would look in the new bucket and miss the key</li>
+      </ul>
+      <div class="sumline" id="woSum"></div>
+      <p class="msg" id="woMsg"></p>
+    </div>
+    <div class="try">
+      <p class="do">Resize both ways, then look for "tea"</p>
+      <div class="row" id="woBtns"></div>
+      <div class="dia"><div id="woTab"></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-title="The cost of resizing">
+  <h1>The cost of resizing</h1>
+  <div class="cols">
+    <div class="stack">
+      <ul class="pts">
+        <li>resize is O(n), since it moves every key</li>
+        <li>Each doubling takes twice as many puts to fill, so resizes happen less and less often</li>
+        <li>1,000 puts move 1,023 keys in total, which is about 1 extra move per put, so put is still <b>O(1) on average</b></li>
+      </ul>
+    </div>
+    <div class="stack">
+      <div>
+        <div class="lbl">1,000 puts, starting with 8 buckets</div>
+        <div class="tw"><table class="t num tight">
+          <thead><tr><th>Resize on put</th><th>Buckets after</th><th>Keys moved</th></tr></thead>
+          <tbody>
+            <tr><td>9</td><td>16</td><td>9</td></tr>
+            <tr><td>17</td><td>32</td><td>17</td></tr>
+            <tr><td>33</td><td>64</td><td>33</td></tr>
+            <tr><td>65</td><td>128</td><td>65</td></tr>
+            <tr><td>129</td><td>256</td><td>129</td></tr>
+            <tr><td>257</td><td>512</td><td>257</td></tr>
+            <tr><td>513</td><td>1,024</td><td>513</td></tr>
+            <tr><td><b>Total</b></td><td></td><td><b>1,023</b></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-title="The worst case">
+  <h1>The worst case</h1>
+  <div class="cols">
+    <div class="stack">
+      <p>Having enough buckets only helps if the hash function spreads the keys out</p>
+      <div class="tw"><table class="t">
+        <thead><tr><th>Where the keys land</th><th>put, get and remove</th></tr></thead>
+        <tbody>
+          <tr><td>Spread across the buckets</td><td class="o g">O(1)</td></tr>
+          <tr><td>All in one bucket</td><td class="o">O(n)</td></tr>
+        </tbody>
+      </table></div>
+      <p>With every key in one bucket, the table is a linked list</p>
+    </div>
+    <div class="try">
+      <p class="do">Try the same 16 keys with three hash functions</p>
+      <div class="row" id="tcBtns"></div>
+      <div class="dia"><div id="tcTab"></div></div>
+      <p class="msg" id="tcCap"></p>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-title="A better hash function">
+  <h1>A better hash function</h1>
+  <div class="cols">
+    <div class="stack">
+      <p>Adding up letters ignores their order, so "pear" and "reap" always collide. Multiplying the total by 31 before adding each letter fixes that.</p>
+      <pre class="code" id="cMul"></pre>
+      <div class="tw"><table class="t num">
+        <thead><tr><th>Key</th><th>Adding</th><th>Multiplying by 31</th></tr></thead>
+        <tbody>
+          <tr><td>"ab"</td><td>97 + 98 = 195</td><td>97 &times; 31 + 98 = 3,105</td></tr>
+          <tr><td>"ba"</td><td>98 + 97 = 195</td><td>98 &times; 31 + 97 = 3,135</td></tr>
+        </tbody>
+      </table></div>
+      <p>The first letter gets multiplied and the last one doesn't, so the same letters in a different order give a different total</p>
+    </div>
+    <div class="try">
+      <p class="do"><label for="ghIn">Type some keys</label></p>
+      <div class="row"><input type="text" class="word wide" id="ghIn" value="pear, reap, peach, cheap" autocomplete="off" spellcheck="false"></div>
+      <div class="pair">
+        <div><div class="lbl">Adding letters</div><div class="dia"><div id="ghA"></div></div></div>
+        <div><div class="lbl">Multiplying by 31</div><div class="dia"><div id="ghB"></div></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-title="Space complexity">
+  <h1>Space complexity</h1>
+  <div class="cols">
+    <div class="stack">
+      <div class="tw"><table class="t">
+        <thead><tr><th>Part</th><th>Count</th></tr></thead>
+        <tbody>
+          <tr><td>Nodes, one for each key</td><td>n</td></tr>
+          <tr><td>Buckets</td><td>m</td></tr>
+          <tr><td><b>Total</b></td><td>n + m, which is <b>O(n)</b></td></tr>
+        </tbody>
+      </table></div>
+      <ul class="pts">
+        <li>n + m is O(n) because resizing keeps the number of buckets under twice the number of keys</li>
+        <li>A linked list needs only the nodes, so a hash table uses more memory to make searching faster</li>
+        <li>put, get and remove use O(1) extra space, for index, current and prev</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <div><div class="lbl">n = 5 nodes, m = 8 buckets</div><div class="dia"><div id="spTab"></div></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-title="dict and set">
+  <h1>dict and set</h1>
+  <div class="cols">
+    <div class="stack">
+      <p>Python's dict is a hash table, and a set is a hash table with keys and no values</p>
+      <ul class="pts">
+        <li><code>x in my_set</code> is O(1) on average, while <code>x in my_list</code> is O(n) because it searches the list</li>
+        <li>dict hashes keys with Python's built-in <code>hash()</code>, which works on strings, numbers and tuples</li>
+        <li>A list can't be a key because if the list changed, its hash would change and dict would look for it in the wrong bucket</li>
+      </ul>
+    </div>
+    <div class="tw"><table class="t">
+      <thead><tr><th>Python</th><th>Hash table</th></tr></thead>
+      <tbody>
+        <tr><td><code>menu = {}</code></td><td>An empty table</td></tr>
+        <tr><td><code>menu["tea"] = 2</code></td><td><code>put</code></td></tr>
+        <tr><td><code>menu["tea"]</code></td><td><code>get</code></td></tr>
+        <tr><td><code>"tea" in menu</code></td><td><code>get</code>, but returns <code>True</code> or <code>False</code></td></tr>
+        <tr><td><code>del menu["tea"]</code></td><td><code>remove</code></td></tr>
+        <tr><td><code>len(menu)</code></td><td>Returns <code>count</code>, the number of keys</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<section class="slide" data-title="Summary">
+  <h1>Summary</h1>
+  <div class="tw"><table class="t all">
+    <thead><tr><th>Structure</th><th>Search</th><th>Add</th><th>Remove</th><th>Space</th></tr></thead>
+    <tbody>
+      <tr><td>List</td><td class="o">O(n)</td><td class="o">O(1) <span>at the end</span></td><td class="o">O(n)</td><td class="o">O(n)</td></tr>
+      <tr><td>Linked list</td><td class="o">O(n)</td><td class="o">O(1) <span>at the head</span></td><td class="o">O(n)</td><td class="o">O(n)</td></tr>
+      <tr><td>Binary search tree</td><td class="o">O(log n)</td><td class="o">O(log n)</td><td class="o">O(log n)</td><td class="o">O(n)</td></tr>
+      <tr><td>Hash table</td><td class="o g">O(1)</td><td class="o g">O(1)</td><td class="o g">O(1)</td><td class="o">O(n)</td></tr>
+    </tbody>
+  </table></div>
+  <ul class="pts">
+    <li>The hash table times are averages, and the worst case is O(n)</li>
+    <li>The binary search tree times need a balanced tree</li>
+    <li>A hash table is the fastest way to find something by its key, but it keeps no order, so finding the smallest key means going through the whole table</li>
+  </ul>
+</section>
+
+<section class="slide" data-title="Playground">
+  <h1>Playground</h1>
+  <p>Edit any of the code from the slides, then use the buttons to add, find and remove keys</p>
+  <div class="cols pgcols">
+    <div class="stack" style="gap:.5rem">
+      <textarea class="ed" id="pgEd" spellcheck="false" aria-label="Hash table code"></textarea>
+      <div class="row"><button id="pgResetCode">Reset code</button></div>
+    </div>
+    <div class="stack">
+      <div class="row"><label for="pgKey">key</label><input type="text" class="word" id="pgKey" value="fig" maxlength="10" autocomplete="off" spellcheck="false"><label for="pgVal">value</label><input type="number" id="pgVal" value="3"></div>
+      <div class="row"><button class="pri" id="pgPut">put(key, value)</button><button id="pgGet">get(key)</button><button id="pgRem">remove(key)</button><button id="pgClear">Empty the table</button></div>
+      <div class="row"><span id="pgStatus"></span></div>
+      <div><div class="lbl">Table</div><div class="dia"><div id="pgTab"></div></div></div>
+      <div><div class="lbl">Console</div><pre class="outbox" id="pgOut" style="max-height:22vh; overflow:auto"></pre></div>
+    </div>
+  </div>
+</section>
+
+</main>
+<nav class="nav" aria-label="Slides">
+  <div class="prog" id="prog"></div>
+  <span class="ttl" id="ttl"></span>
+  <button id="prev" aria-label="Previous slide">&lsaquo;</button>
+  <span class="cnt" id="cnt"></span>
+  <button id="next" aria-label="Next slide">&rsaquo;</button>
+</nav>
+</div>
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const fmt = a => '[' + a.join(', ') + ']';
+const num = n => Math.round(n).toLocaleString('en-US');
+const list = a => a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1];
+const swap = (a, i, j) => { const t = a[i]; a[i] = a[j]; a[j] = t; };
+
+/* ================= code display ================= */
+const KW = /\b(def|class|while|if|else|elif|return|for|in|not|is|None|True|False|and|or|self)\b/g;
+function hlLine(line){
+  let code = line, cm = '';
+  const h = line.indexOf('#');
+  if (h >= 0 && (line.slice(0,h).split('"').length % 2 === 1)) { code = line.slice(0,h); cm = line.slice(h); }
+  const parts = code.split(/("[^"]*")/);
+  const out = parts.map((p,i) => i%2 ? '<span class="st">'+esc(p)+'</span>' : esc(p).replace(KW, m => m === 'self' ? m : '<span class="kw">'+m+'</span>')).join('');
+  return out + (cm ? '<span class="cm">'+esc(cm)+'</span>' : '');
+}
+function renderCode(pre, text, nums=true){
+  pre.innerHTML = text.split('\n').map((l,i) =>
+    '<span class="ln">' + (nums ? '<span class="no">'+(i+1)+'</span>' : '') + (hlLine(l) || ' ') + '</span>').join('');
+}
+
+/* ================= list cells ================= */
+// o = {cls:{i:class}, mk:{i:[labels]}, idx:bool, size:'sm'|'xs', click:bool, mkh:rows}
+function cells(a, o = {}){
+  const cls = o.cls || {}, mk = o.mk;
+  return `<div class="cells ${o.size || ''}${o.click ? ' clk' : ''}"${mk ? ` style="--mkh:${(o.mkh || 1) * 1.25}em"` : ''}>` + a.map((v, i) =>
+    `<div class="cell" data-i="${i}">`
+    + (mk ? `<span class="mk2">${(mk[i] || []).map(t => t[0] === '!' ? `<span class="a">${esc(t.slice(1))}</span>` : `<span>${esc(t)}</span>`).join('')}</span>` : '')
+    + `<span class="chip ${cls[i] || ''}">${v == null ? '0' : esc(v)}</span>`
+    + (o.idx ? `<span class="ix">${i}</span>` : '') + '</div>').join('') + '</div>';
+}
+const addMk = (mk, i, t) => { if (i == null || i < 0) return; (mk[i] = mk[i] || []).push(t); };
+
+/* ================= player ================= */
+const PLAYERS = [];
+class Player {
+  constructor(root, o = {}){
+    this.o = o; this.steps = []; this.i = 0; this.timer = 0; this.root = root;
+    root.classList.add('pl'); if (!o.code) root.classList.add('nocode');
+    root.innerHTML = (o.code ? '<pre class="code"></pre>' : '') + `
+      <div class="pl-side">
+        <div class="pl-ctl"><button data-a="back">Back</button><button data-a="step" class="pri">Step</button><button data-a="play">Play</button><span class="pl-count"></span></div>
+        <div class="pl-note"></div>
+        <div class="pl-body">${o.body || ''}</div>
+      </div>`;
+    this.note = root.querySelector('.pl-note');
+    this.count = root.querySelector('.pl-count');
+    this.btn = {}; root.querySelectorAll('[data-a]').forEach(b => { this.btn[b.dataset.a] = b; });
+    this.btn.back.onclick = () => { this.pause(); this.go(this.i - 1); };
+    this.btn.step.onclick = () => { this.pause(); this.i >= this.steps.length - 1 ? this.go(0) : this.go(this.i + 1); };
+    this.btn.play.onclick = () => this.timer ? this.pause() : this.play();
+    this.lineEls = [];
+    if (o.code) { const pre = this.pre = root.querySelector('pre.code'); renderCode(pre, o.code); this.lineEls = pre.querySelectorAll('.ln');
+      if (o.build) { const ls = o.code.split('\n'); pre.style.minHeight = `calc(${ls.length} * 1.6em + 1.6rem)`; pre.style.width = `calc(${Math.max(...ls.map(l => l.length))}ch + 4.8rem)`; pre.style.maxWidth = '100%'; this.btn.play.hidden = true; } }
+    if (o.init) o.init(this);
+    PLAYERS.push(this);
+  }
+  q(sel){ return this.root.querySelector(sel); }
+  load(steps){ this.pause(); this.steps = steps; this.go(0); }
+  go(i){
+    i = Math.max(0, Math.min(this.steps.length - 1, i)); this.i = i;
+    const st = this.steps[i], pv = i > 0 ? this.steps[i-1] : null;
+    const lines = st.line == null ? [] : [].concat(st.line);
+    if (st.code != null) { renderCode(this.pre, st.code); this.lineEls = this.pre.querySelectorAll('.ln'); }
+    this.lineEls.forEach((el, k) => el.classList.toggle('on', lines.includes(k + 1)));
+    if (Array.isArray(st.note)) this.note.innerHTML = '<ul>' + st.note.map(t => '<li>' + esc(t) + '</li>').join('') + '</ul>'; else this.note.textContent = st.note || '';
+    this.count.textContent = `${this.o.build ? 'Piece' : 'Step'} ${i+1} of ${this.steps.length}`;
+    this.btn.back.disabled = i === 0;
+    this.btn.step.textContent = i >= this.steps.length - 1 ? 'Start over' : this.o.build ? 'Next' : 'Step';
+    this.o.render(st, this, pv);
+  }
+  play(){
+    if (this.i >= this.steps.length - 1) this.go(0);
+    this.btn.play.textContent = 'Pause';
+    this.timer = setInterval(() => { this.go(this.i + 1); if (this.i >= this.steps.length - 1) this.pause(); }, this.o.speed || 1100);
+  }
+  pause(){ clearInterval(this.timer); this.timer = 0; if (this.btn) this.btn.play.textContent = 'Play'; }
+}
+function scenarios(rowId, player, items){
+  const row = $(rowId);
+  const pick = i => { [...row.children].forEach((b, k) => b.classList.toggle('sel', k === i)); player.load(items[i][1]()); };
+  items.forEach(([label], i) => { const b = document.createElement('button'); b.textContent = label; b.onclick = () => pick(i); row.appendChild(b); });
+  pick(0);
+}
+
+/* ================= hash table model ================= */
+const hsum = k => [...String(k)].reduce((t, c) => t + c.charCodeAt(0), 0);
+const hidx = (k, n = 8) => hsum(k) % n;
+const cp = B => B.map(ch => ch.map(x => x.slice()));
+const mkT = (pairs, n = 8, h = hidx) => { const B = Array.from({length:n}, () => []); pairs.forEach(([k, v]) => B[h(k, n)].unshift([k, v])); return B; };
+const MENU = [['tea', 2], ['pie', 5], ['egg', 3], ['ham', 6], ['jam', 4], ['soy', 1], ['bun', 2], ['rye', 3], ['oat', 4]];
+const q = k => `"${k}"`;
+
+// B = list of chains, chain = [[key, value]] with the head first
+// o = {row:{i:class}, nd:{key:class}, mk:{key:label}, end:{i:label}, sm, keys, mkOn}
+function arr(items, o = {}){
+  const cls = o.cls || {};
+  const top = o.labels ? o.labels.map(t => `<span>${t}</span>`).join('') : `<b>${o.name}</b>`;
+  return `<div class="arr"><div class="al"><div class="alt">${top}</div><span class="ix">index</span></div><div class="ac">` + items.map((v, i) =>
+    `<div class="a1 ${cls[i] || ''}"><div class="av">${Array.isArray(v) ? `<b>${esc(v[0])}</b><i>${esc(v[1])}</i>` : (v === '' ? '' : `<b>${esc(v)}</b>`)}</div><span class="ix">${i}</span></div>`).join('') + '</div></div>';
+}
+function tbl(B, o = {}){
+  const row = o.row || {}, nd = o.nd || {}, mk = o.mk || {}, end = o.end || {};
+  if (o.flat) return '<div class="ht flat">' + B.map((ch, i) =>
+    `<div class="hrow ${row[i] || ''}"><span class="hix">${i}</span><span class="hf ${ch[0] ? (nd[ch[0][0]] || '') : 'e'}">${ch[0] ? `<b>${esc(ch[0][0])}</b><i>${esc(ch[0][1])}</i>` : ''}</span></div>`).join('') + '</div>';
+  const lab = t => `<span class="hmk${t === 'prev' ? ' p' : ''}">${t}</span>`;
+  return `<div class="ht${o.mkOn ? ' mk' : ''}${o.sm ? ' sm' : ''}">` + B.map((ch, i) =>
+    `<div class="hrow ${row[i] || ''}"><span class="hix">${i}</span><span class="hb${ch.length ? ' full' : ''}"></span>`
+    + ch.map(([k, v]) => `<span class="harr">&rarr;</span><span class="hn ${nd[k] || ''}">${mk[k] ? lab(mk[k]) : ''}<b>${esc(k)}</b>${o.keys ? '' : `<i>${esc(v)}</i>`}</span>`).join('')
+    + (end[i] ? `<span class="harr">&rarr;</span><span class="hnone">${lab(end[i])}None</span>` : '')
+    + '</div>').join('') + '</div>';
+}
+
+const CODE = {
+sum:
+`total = 0
+for letter in key:
+    total = total + ord(letter)`,
+hash:
+`def hash_key(self, key):
+    total = 0
+    for letter in key:
+        total = total + ord(letter)
+    return total % len(self.buckets)`,
+mul:
+`total = 0
+for letter in key:
+    total = total * 31 + ord(letter)`,
+node:
+`class Node:
+    def __init__(self, key, value):
+        self.key = key
+        self.value = value
+        self.next = None`,
+init:
+`class HashTable:
+    def __init__(self):
+        self.buckets = [None] * 8
+        self.count = 0`,
+put:
+`def put(self, key, value):
+    index = self.hash_key(key)
+    current = self.buckets[index]
+    while current is not None:
+        if current.key == key:
+            current.value = value
+            return
+        current = current.next
+    new_node = Node(key, value)
+    new_node.next = self.buckets[index]
+    self.buckets[index] = new_node
+    self.count += 1`,
+get:
+`def get(self, key):
+    index = self.hash_key(key)
+    current = self.buckets[index]
+    while current is not None:
+        if current.key == key:
+            return current.value
+        current = current.next
+    return None`,
+remove:
+`def remove(self, key):
+    index = self.hash_key(key)
+    prev = None
+    current = self.buckets[index]
+    while current is not None:
+        if current.key == key:
+            if prev is None:
+                self.buckets[index] = current.next
+            else:
+                prev.next = current.next
+            self.count -= 1
+            return
+        prev = current
+        current = current.next
+    print("Key not in table")`,
+resize:
+`def resize(self):
+    old = self.buckets
+    self.buckets = [None] * (len(old) * 2)
+    self.count = 0
+    for head in old:
+        current = head
+        while current is not None:
+            self.put(current.key, current.value)
+            current = current.next`
+};
+renderCode($('cSum'), CODE.sum, false);
+renderCode($('cMenu'), 'menu = [["tea", 2], ["pie", 5], ["egg", 3], ["jam", 4], ["bun", 2], ["nut", 3], ["oat", 4]]', false);
+renderCode($('cHash'), CODE.sum + '\nindex = total % 8', false);
+renderCode($('cMul'), CODE.mul, false);
+renderCode($('cRs'), 'if self.count > len(self.buckets):\n    self.resize()', false);
+
+const btnRow = (id, labels, fn, first = 0) => {
+  const row = $(id);
+  labels.forEach((t, i) => { const b = document.createElement('button'); b.textContent = t;
+    b.onclick = () => { [...row.children].forEach(x => x.classList.toggle('sel', x === b)); fn(i, t); };
+    row.appendChild(b); });
+  if (first != null) row.children[first].click();
+};
+const cleanKey = s => s.replace(/[^A-Za-z0-9 _-]/g, '').slice(0, 10);
+
+/* ================= slide: title ================= */
+(() => {
+  let k = 0, timer = 0;
+  const draw = () => {
+    const [key] = MENU[Math.max(0, k - 1)];
+    $('tiTab').innerHTML = tbl(mkT(MENU.slice(0, k)), {row:k ? {[hidx(key)]:'on'} : {}, nd:k ? {[key]:'cur'} : {}});
+    $('tiLine').innerHTML = k ? `${q(key)} <span>&rarr;</span> ${hsum(key)} % 8 <span>&rarr;</span> bucket ${hidx(key)}` : '';
+  };
+  draw();
+  timer = setInterval(() => { k++; draw(); if (k >= MENU.length) clearInterval(timer); }, 850);
+})();
+
+/* ================= slides: searching, knowing the index ================= */
+(() => {
+  const items = [['tea', 2], ['pie', 5], ['egg', 3], ['jam', 4], ['bun', 2], ['nut', 3], ['oat', 4]];
+  const keys = items.map(x => x[0]);
+  let timer = 0;
+  const stop = () => { clearInterval(timer); timer = 0; };
+  const find = key => {
+    stop();
+    const at = keys.indexOf(key); let i = 0;
+    const tick = () => {
+      const cls = {}; for (let j = 0; j < i; j++) cls[j] = 'dim';
+      cls[i] = i === at ? 'ok' : 'cur';
+      $('s2List').innerHTML = arr(items, {labels:['name', 'price'], cls});
+      $('s2LC').innerHTML = i === at ? `Found ${q(key)} at index ${i} after <b>${i + 1} check${i ? 's' : ''}</b>` : `Checking index ${i}`;
+      if (i === at) stop(); else i++;
+    };
+    tick(); if (at > 0) timer = setInterval(tick, 420);
+  };
+  $('s2List').innerHTML = arr(items, {labels:['name', 'price']});
+  btnRow('s2Btns', ['tea', 'jam', 'oat'].map(q), (i, t) => find(t.slice(1, -1)), null);
+  PLAYERS.push({pause:stop});
+  $('s3iList').innerHTML = arr(items, {labels:['name', 'price']});
+  btnRow('s3iBtns', [0, 3, 6].map(i => `menu[${i}]`), i => {
+    const at = [0, 3, 6][i];
+    $('s3iList').innerHTML = arr(items, {labels:['name', 'price'], cls:{[at]:'ok'}});
+    $('s3iC').innerHTML = `menu[${at}] is [${q(keys[at])}, ${items[at][1]}], found with <b>no checks</b>`;
+  }, null);
+})();
+
+/* ================= slide: the idea ================= */
+(() => {
+  const keys = ['tea', 'pie', 'egg', 'jam', 'bun', 'nut', 'oat'];
+  const slots = Array(8).fill('');
+  let t1 = 0;
+  btnRow('s3Btns', keys.map(q), (i) => {
+    const k = keys[i], h = hidx(k);
+    clearTimeout(t1);
+    $('s3Key').textContent = q(k); $('s3Idx').textContent = '';
+    $('s3Tab').innerHTML = arr(slots, {name:'buckets'});
+    t1 = setTimeout(() => {
+      $('s3Idx').textContent = h; slots[h] = k;
+      $('s3Tab').innerHTML = arr(slots, {name:'buckets', cls:{[h]:'cur'}});
+    }, 450);
+  });
+})();
+
+/* ================= slides: hash function ================= */
+(() => {
+  const draw4 = () => {
+    const k = $('s4In').value;
+    $('s4Ltrs').innerHTML = (k ? '<div class="lt lab"><span>letter</span><span>ord(letter)</span></div>' : '') + [...k].map((c, i) => (i ? '<span class="pl2">+</span>' : '') + `<div class="lt"><span class="chip">${esc(c === ' ' ? '␣' : c)}</span><span>${c.charCodeAt(0)}</span></div>`).join('');
+    $('s4Sum').innerHTML = k ? `<span>total =</span> ${hsum(k)}` : '';
+  };
+  const draw5 = () => {
+    const k = $('s5In').value, s = hsum(k), h = s % 8, cls = {};
+    if (k) cls[h] = 'cur';
+    const slots = Array(8).fill(''); if (k) slots[h] = k.length > 4 ? k.slice(0, 3) + '…' : k;
+    $('s5Sum').innerHTML = k ? `${esc(q(k))} <span>&rarr;</span> ${s} <span>&rarr;</span> ${s} % 8 <span>=</span> ${h}` : '';
+    $('s5Tab').innerHTML = arr(slots, {name:'buckets', cls});
+  };
+  const sync = (from, to) => { $(from).value = cleanKey($(from).value); $(to).value = $(from).value; draw4(); draw5(); };
+  $('s4In').oninput = () => sync('s4In', 's5In');
+  $('s5In').oninput = () => sync('s5In', 's4In');
+  draw4(); draw5();
+})();
+
+/* ================= shared table player ================= */
+const TBODY = '<div class="vars" data-v="vars"></div><div class="dia"><div data-v="t"></div></div>';
+function tRender(st, pl){
+  pl.q('[data-v=t]').innerHTML = tbl(st.B, st);
+  const v = pl.q('[data-v=vars]'); if (v) v.innerHTML = st.vars || '';
+}
+
+/* ================= slide: storing and finding ================= */
+(() => {
+  const p = new Player($('sfPl'), {speed:2200, body:'<div class="sumline" data-v="call"></div><div><div class="lbl">buckets</div><div class="dia"><div data-v="t"></div></div></div>',
+    render(st, pl){ pl.q('[data-v=t]').innerHTML = tbl(st.B, Object.assign({flat:true}, st)); pl.q('[data-v=call]').textContent = st.call || ''; }});
+  const steps = [], B = mkT([]);
+  const say = k => `${q(k)} adds up to ${hsum(k)}, and ${hsum(k)} % 8 is ${hidx(k)}`;
+  steps.push({call:'menu = HashTable()', note:'A new hash table starts with 8 empty buckets', B:cp(B)});
+  MENU.slice(0, 3).forEach(([k, v]) => {
+    const h = hidx(k); B[h].unshift([k, v]);
+    steps.push({call:`menu.put(${q(k)}, ${v})`, note:`${say(k)}, so it goes in bucket ${h}`, B:cp(B), row:{[h]:'on'}, nd:{[k]:'new'}});
+  });
+  steps.push({call:'menu.get("pie")', note:[`${say('pie')}, same as before`, 'Bucket 6 has "pie", so get returns 5'], B:cp(B), row:{6:'on'}, nd:{pie:'ok'}});
+  steps.push({call:'menu.get("bun")', note:[`${say('bun')}`, 'Bucket 5 is empty, so "bun" isn\'t in the table'], B:cp(B), row:{5:'bad'}});
+  steps.push({call:'menu.put("ham", 6)', note:[`${say('ham')}`, 'Bucket 6 already has "pie"'], B:cp(B), row:{6:'bad'}, nd:{pie:'bad'}});
+  p.load(steps);
+})();
+
+/* ================= slide: collisions ================= */
+(() => {
+  const base = mkT(MENU.slice(0, 3)), keys = ['ham', 'soy', 'bun', 'eat'];
+  $('coTab').innerHTML = tbl(base, {flat:true});
+  btnRow('coBtns', keys.map(q), i => {
+    const k = keys[i], h = hidx(k), hit = base[h][0];
+    $('coSum').innerHTML = `${q(k)} <span>&rarr;</span> ${hsum(k)} % 8 <span>=</span> ${h}`;
+    $('coTab').innerHTML = tbl(base, {flat:true, row:{[h]:hit ? 'bad' : 'ok'}, nd:hit ? {[hit[0]]:'bad'} : {}});
+    $('coMsg').className = 'msg ' + (hit ? 'bad' : 'good');
+    $('coMsg').textContent = hit ? (hsum(k) === hsum(hit[0]) ? `${q(k)} has the same letters as ${q(hit[0])}, so it also adds up to ${hsum(k)} and collides` : `Bucket ${h} already has ${q(hit[0])}, so this is a collision`) : `Bucket ${h} is empty, so there is no collision`;
+  });
+})();
+
+/* ================= slide: chaining ================= */
+(() => {
+  const p = new Player($('chPl'), {speed:1900, body:'<div class="sumline" data-v="call"></div><div class="dia"><div data-v="t"></div></div>',
+    render(st, pl){ pl.q('[data-v=t]').innerHTML = tbl(st.B, st); pl.q('[data-v=call]').textContent = st.call || ''; }});
+  const steps = [], B = mkT(MENU.slice(0, 3));
+  steps.push({note:'A dot means the bucket holds the head of a list, and None means the bucket is empty', B:cp(B)});
+  MENU.slice(3).forEach(([k, v]) => {
+    const h = hidx(k), old = B[h][0]; B[h].unshift([k, v]);
+    steps.push({call:`menu.put(${q(k)}, ${v})`, B:cp(B), row:{[h]:'on'}, nd:{[k]:'new'},
+      note:old ? `Bucket ${h} has ${q(old[0])}, so ${q(k)} goes in front and becomes the head` : `Bucket ${h} is empty, so ${q(k)} becomes its head`});
+  });
+  steps.push({note:'There are 9 keys in 8 buckets, and no list has more than 2 nodes', B:cp(B)});
+  p.load(steps);
+})();
+
+/* ================= slide: node and hashtable ================= */
+(() => {
+  const p = new Player($('setBuild'), {code:[CODE.node, CODE.init, CODE.hash.replace(/^/gm, '    ')].join('\n\n'), build:true, body:'<div data-v="b"></div>',
+    render(st, pl){ pl.q('[data-v=b]').innerHTML = st.html; }});
+  const empty = '<div class="dia">' + tbl(mkT([])) + '</div>';
+  p.load([
+    {code:CODE.node, line:[3, 4, 5],
+     note:['A node holds one key and its value', 'It keeps the key so we can tell apart the pairs that share a bucket', 'next points to the next node in the same bucket'],
+     html:'<div class="memnode"><span class="v">key</span><span class="v">value</span><span>next</span></div>'},
+    {code:CODE.node + '\n\n' + CODE.init, line:[9, 10],
+     note:['[None] * 8 is a list of 8 Nones', 'Each one will hold the head of a linked list', 'count is the number of keys in the table'],
+     html:empty},
+    {code:[CODE.node, CODE.init, CODE.hash.replace(/^/gm, '    ')].join('\n\n'), line:[12, 13, 14, 15, 16],
+     note:['hash_key is the calculation from the last two slides, written as a function', 'It uses len(self.buckets) instead of 8, so it still works when the list grows'],
+     html:empty}
+  ]);
+})();
+
+/* ================= slide: put build ================= */
+(() => {
+  const p = new Player($('putBuild'), {code:CODE.put, build:true, body:TBODY, render:tRender});
+  const L = CODE.put.split('\n'), B = mkT(MENU.slice(0, 3)), B2 = cp(B);
+  B2[6].unshift(['ham', 6]);
+  p.load([
+    {code:L.slice(0, 3).join('\n'), line:[2, 3],
+     note:['index is the key\'s bucket', 'current starts at that bucket\'s head'],
+     vars:'menu.put("ham", 6)', B, mkOn:true, row:{6:'on'}, mk:{pie:'current'}, nd:{pie:'cur'}},
+    {code:L.slice(0, 8).join('\n'), line:[4, 5, 6, 7, 8],
+     note:['The loop checks each node in this bucket\'s list', 'If the key is already there, change its value and return', 'Without this check, the same key could be stored twice'],
+     vars:'menu.put("ham", 6)', B, mkOn:true, row:{6:'on'}, end:{6:'current'}},
+    {code:CODE.put, line:[9, 10, 11, 12],
+     note:['If the loop ends, the key isn\'t in the table', 'The new node points at the old head, then the bucket points at the new node', 'This needs no prev, and on an empty bucket new_node.next becomes None, which is correct'],
+     vars:'menu.put("ham", 6)', B:B2, mkOn:true, row:{6:'on'}, nd:{ham:'new'}}
+  ]);
+})();
+
+/* ================= step generators ================= */
+function walker(B0, key, call){
+  const B = cp(B0), n = B.length, idx = hidx(key, n), ch = B[idx], steps = [];
+  const vars = i => `key = <b>${q(key)}</b>` + (i ? ` &nbsp; index = <b>${idx}</b>` : '');
+  const push = (line, note, x = {}) => steps.push(Object.assign({line, note, B:cp(B), row:{[idx]:'on'}, mkOn:true, vars:vars(1)}, x));
+  steps.push({line:1, note:`Calling ${call}`, B:cp(B), mkOn:true, vars:vars(0)});
+  push(2, `${q(key)} adds up to ${hsum(key)}, and ${hsum(key)} % ${n} is ${idx}`);
+  return {B, idx, ch, steps, push};
+}
+function genPut(B0, key, value){
+  const {B, idx, ch, steps, push} = walker(B0, key, `menu.put(${q(key)}, ${value})`);
+  if (!ch.length) push([3, 4], `Bucket ${idx} is empty, so current is None and the loop is skipped`);
+  else {
+    push(3, `current starts at the head of bucket ${idx}`, {mk:{[ch[0][0]]:'current'}, nd:{[ch[0][0]]:'cur'}});
+    for (let i = 0; i < ch.length; i++) {
+      const k = ch[i][0];
+      if (k === key) {
+        push([4, 5], `current.key is ${q(k)}, which matches the key`, {mk:{[k]:'current'}, nd:{[k]:'cur'}});
+        const old = ch[i][1]; ch[i][1] = value;
+        push([6, 7], `Its value changes from ${old} to ${value}, and put returns`, {nd:{[k]:'ok'}});
+        return steps;
+      }
+      push([4, 5], `current.key is ${q(k)}, not ${q(key)}`, {mk:{[k]:'current'}, nd:{[k]:'cur'}});
+      if (i + 1 < ch.length) push(8, 'current moves to the next node', {mk:{[ch[i + 1][0]]:'current'}, nd:{[ch[i + 1][0]]:'cur'}});
+      else push([8, 4], `current is None, so ${q(key)} isn't in this bucket`, {end:{[idx]:'current'}});
+    }
+  }
+  ch.unshift([key, value]);
+  push([9, 10, 11], ch.length > 1 ? `The new node points at ${q(ch[1][0])}, then bucket ${idx} points at it` : `Bucket ${idx} points at the new node`, {nd:{[key]:'new'}});
+  push(12, `count goes up to ${B.flat().length}`, {nd:{[key]:'new'}});
+  return steps;
+}
+function genGet(B0, key){
+  const {idx, ch, steps, push} = walker(B0, key, `menu.get(${q(key)})`);
+  if (!ch.length) { push([3, 4], `Bucket ${idx} is empty, so current is None and the loop is skipped`); push(8, `${q(key)} isn't in the table, so get returns None`); return steps; }
+  push(3, `current starts at the head of bucket ${idx}`, {mk:{[ch[0][0]]:'current'}, nd:{[ch[0][0]]:'cur'}});
+  for (let i = 0; i < ch.length; i++) {
+    const [k, v] = ch[i];
+    if (k === key) { push([4, 5, 6], `current.key is ${q(k)}, so get returns ${v}`, {mk:{[k]:'current'}, nd:{[k]:'ok'}});
+      steps.push(Object.assign({}, steps[steps.length - 1], {line:null, note:`get found it after ${i + 1} check${i ? 's' : ''} and never looked at the other ${B0.flat().length - i - 1} nodes`})); return steps; }
+    push([4, 5], `current.key is ${q(k)}, not ${q(key)}`, {mk:{[k]:'current'}, nd:{[k]:'cur'}});
+    if (i + 1 < ch.length) push(7, 'current moves to the next node', {mk:{[ch[i + 1][0]]:'current'}, nd:{[ch[i + 1][0]]:'cur'}});
+    else push([7, 4], 'current is None, so the loop stops', {end:{[idx]:'current'}});
+  }
+  push(8, `${q(key)} isn't in bucket ${idx}, so get returns None`, {end:{[idx]:'current'}});
+  return steps;
+}
+function genRemove(B0, key){
+  const {B, idx, ch, steps, push} = walker(B0, key, `menu.remove(${q(key)})`);
+  const marks = i => { const mk = {}, nd = {}; if (i > 0) { mk[ch[i - 1][0]] = 'prev'; nd[ch[i - 1][0]] = 'prev'; } if (i < ch.length) { mk[ch[i][0]] = 'current'; nd[ch[i][0]] = 'cur'; } return {mk, nd, end:i >= ch.length ? {[idx]:'current'} : {}}; };
+  push([3, 4], ch.length ? `prev starts at None, and current at the first node in bucket ${idx}` : `Bucket ${idx} is empty, so current is None`, marks(0));
+  for (let i = 0; i < ch.length; i++) {
+    const k = ch[i][0];
+    if (k === key) {
+      push([5, 6], `current.key is ${q(k)}, which matches the key`, marks(i));
+      const m = marks(i); m.nd[k] = 'bad';
+      if (i === 0) push([7, 8], `prev is None, so ${q(k)} is the head, and the bucket moves to the next node`, m);
+      else push([7, 9, 10], `prev.next skips over ${q(k)}`, m);
+      ch.splice(i, 1);
+      push([11, 12], `${q(k)} is removed, and count goes down to ${B.flat().length}`);
+      return steps;
+    }
+    push([5, 6], `current.key is ${q(k)}, not ${q(key)}`, marks(i));
+    push([13, 14], i + 1 < ch.length ? 'prev and current both move forward' : 'current is None, so the loop stops', marks(i + 1));
+  }
+  push(15, `${q(key)} isn't in the table`, {row:{[idx]:'bad'}});
+  return steps;
+}
+
+/* ================= slides: put, get, remove ================= */
+(() => {
+  const B3 = mkT(MENU.slice(0, 3)), B6 = mkT(MENU.slice(0, 6));
+  const put = new Player($('putPl'), {code:CODE.put, speed:1700, body:TBODY, render:tRender});
+  scenarios('putSc', put, [
+    ['Empty bucket', () => genPut(B3, 'jam', 4)],
+    ['Collision', () => genPut(B3, 'ham', 6)],
+    ['Key already there', () => genPut(B6, 'pie', 7)]
+  ]);
+  const get = new Player($('getPl'), {code:CODE.get, speed:1700, body:TBODY, render:tRender});
+  scenarios('getSc', get, [
+    ['get("ham")', () => genGet(B6, 'ham')],
+    ['get("pie")', () => genGet(B6, 'pie')],
+    ['get("fig")', () => genGet(B6, 'fig')]
+  ]);
+  const rem = new Player($('remPl'), {code:CODE.remove, speed:1700, body:TBODY, render:tRender});
+  scenarios('remSc', rem, [
+    ['remove("ham")', () => genRemove(B6, 'ham')],
+    ['remove("pie")', () => genRemove(B6, 'pie')],
+    ['remove("fig")', () => genRemove(B6, 'fig')]
+  ]);
+})();
+
+/* ================= slide: the worst case ================= */
+(() => {
+  const keys = ['jam', 'rye', 'dal', 'roll', 'tea', 'corn', 'egg', 'soy', 'oat', 'cake', 'kiwi', 'bun', 'milk', 'pie', 'ham', 'nut'];
+  const H = [
+    ['Add up the letters', k => hsum(k) % 8, max => `The keys are spread across every bucket, so no key takes more than ${max} checks`],
+    ['Length of the key', k => k.length % 8, max => 'Every key has 3 or 4 letters, so only buckets 3 and 4 are used and each list has half of the keys'],
+    ['Always 0', () => 0, max => `Every key is in bucket 0, so finding "jam" takes ${max} checks`]
+  ];
+  btnRow('tcBtns', H.map(h => h[0]), i => {
+    const B = mkT(keys.map(k => [k, '']), 8, H[i][1]);
+    $('tcTab').innerHTML = tbl(B, {sm:true, keys:true});
+    const max = Math.max(...B.map(c => c.length));
+    $('tcCap').className = 'msg ' + (i ? 'bad' : 'good');
+    $('tcCap').textContent = H[i][2](max);
+  });
+})();
+
+/* ================= slide: load factor ================= */
+(() => {
+  let m = 8, s = 20261204;
+  const R = Array.from({length:48}, () => { s = (s * 1103515245 + 12345) % 2147483648; return Math.floor(s / 65536); });
+  const draw = () => {
+    const n = +$('lfKeys').value, c = Array(m).fill(0);
+    for (let j = 0; j < n; j++) c[R[j] % m]++;
+    const lf = n / m, max = Math.max(...c);
+    $('lfN').textContent = n;
+    $('lfSub').innerHTML = `${n} <span>&divide;</span> ${m} <span>=</span> ${(Math.round(lf * 100) / 100).toString()}`;
+    $('lfG').className = 'lfg' + (m === 8 ? ' few' : '');
+    $('lfG').innerHTML = c.map((x, i) => `<div class="r"><span class="ix">${i}</span>` + (x ? '<i></i>'.repeat(x) : '<i class="e"></i>') + '</div>').join('');
+    const msg = $('lfMsg');
+    if (!n) { msg.textContent = ''; return; }
+    msg.className = 'msg ' + (lf <= 1 ? 'good' : lf > 2 ? 'bad' : '');
+    msg.textContent = lf <= 1 ? `The longest list has ${max} node${max > 1 ? 's' : ''}, so searches are short`
+      : lf <= 2 ? `The longest list has ${max} nodes, so searches are getting slower`
+      : `The longest list has ${max} nodes, and only more buckets will shorten it`;
+  };
+  $('lfKeys').oninput = draw;
+  btnRow('lfB', ['8', '16', '32'], (i, t) => { m = +t; draw(); });
+})();
+
+/* ================= slide: resizing ================= */
+(() => {
+  const p = new Player($('rsPl'), {code:CODE.resize, speed:1500,
+    body:'<div class="tabs2"><div><div class="lbl" data-v="l1"></div><div data-v="a"></div></div><div><div class="lbl" data-v="l2"></div><div data-v="b"></div></div></div>',
+    render(st, pl){
+      pl.q('[data-v=a]').innerHTML = tbl(st.A, {sm:true, nd:st.ndA, row:st.rowA});
+      pl.q('[data-v=b]').innerHTML = st.Bn ? tbl(st.Bn, {sm:true, nd:st.ndB, row:st.rowB}) : '';
+      pl.q('[data-v=l1]').textContent = st.Bn ? 'old, 8 buckets' : 'self.buckets, 8 buckets';
+      pl.q('[data-v=l2]').textContent = st.Bn ? 'self.buckets, 16 buckets' : '';
+    }});
+  const A = mkT(MENU), steps = [], Bn = mkT([], 16), moved = {};
+  steps.push({line:1, note:'menu.put("oat", 4) made 9 keys in 8 buckets, so put calls resize', A});
+  steps.push({line:[2, 3], note:'old keeps the 8 buckets, and self.buckets becomes 16 empty ones', A, Bn:cp(Bn)});
+  steps.push({line:4, note:'count restarts at 0, since put counts each key again', A, Bn:cp(Bn)});
+  steps.push({line:[5, 6], note:'The loops go through each old bucket and each node in it', A, Bn:cp(Bn), rowA:{0:'on'}});
+  steps.push({line:8, note:'Each key goes in with put, which won\'t call resize again because 9 keys are not more than 16 buckets', A, Bn:cp(Bn), rowA:{0:'on'}});
+  A.forEach((ch, i) => ch.forEach(([k, v]) => {
+    const h = hidx(k, 16); Bn[h].unshift([k, v]);
+    const ndA = Object.assign({}, moved, {[k]:'cur'}); moved[k] = 'dim';
+    steps.push({line:[7, 8], A, Bn:cp(Bn), ndA, rowA:{[i]:'on'}, ndB:{[k]:'new'}, rowB:{[h]:'on'},
+      note:`${q(k)} adds up to ${hsum(k)}, and ${hsum(k)} % 16 is ${h}, so it ` + (h === i ? `stays in bucket ${h}` : `moves from bucket ${i} to ${h}`)});
+  }));
+  steps.push({line:null, note:'The load factor went from 9 / 8 to 9 / 16, and no list has more than 1 node', A, Bn:cp(Bn), ndA:Object.assign({}, moved)});
+  p.load(steps);
+})();
+
+/* ================= slide: space ================= */
+$('spTab').innerHTML = tbl(mkT(MENU.slice(0, 5)), {sm:true});
+
+/* ================= slide: good hash function ================= */
+(() => {
+  const mul = k => { let t = 0n; for (const c of k) t = t * 31n + BigInt(c.charCodeAt(0)); return Number(t % 8n); };
+  const draw = () => {
+    const ks = [...new Set($('ghIn').value.split(/[\s,]+/).map(cleanKey).filter(Boolean))].slice(0, 12).map(k => [k, '']);
+    $('ghA').innerHTML = tbl(mkT(ks.slice().reverse()), {sm:true, keys:true});
+    $('ghB').innerHTML = tbl(mkT(ks.slice().reverse(), 8, mul), {sm:true, keys:true});
+  };
+  $('ghIn').oninput = draw; draw();
+})();
+
+/* ================= slide: watch out ================= */
+(() => {
+  const good = mkT(MENU, 16), bad = mkT(MENU).concat(Array.from({length:8}, () => []));
+  btnRow('woBtns', ['Hash every key again', 'Copy the buckets over'], i => {
+    $('woTab').innerHTML = tbl(i ? bad : good, {sm:true, row:{10:i ? 'bad' : 'on'}, nd:{tea:i ? 'bad' : 'ok'}});
+    $('woSum').innerHTML = 'menu.get("tea") <span>&rarr;</span> 314 % 16 <span>=</span> 10';
+    $('woMsg').className = 'msg ' + (i ? 'bad' : 'good');
+    $('woMsg').textContent = i ? 'Bucket 10 is empty, so get returns None, even though "tea" is still in bucket 2' : 'Bucket 10 has "tea", so get returns 2';
+  });
+})();
+
+/* ================= playground (Skulpt) ================= */
+const SK = ['https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js', 'https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt-stdlib.js'];
+let skP = null;
+function loadScript(src){ return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('Could not load Python')); document.head.appendChild(s); }); }
+function loadSk(){ if (!skP) skP = loadScript(SK[0]).then(() => loadScript(SK[1])).then(() => window.Sk).catch(e => { skP = null; throw e; }); return skP; }
+async function runPy(code){
+  const Sk = await loadSk();
+  let out = '';
+  Sk.configure({
+    output: t => { out += t; },
+    read: f => { if (Sk.builtinFiles === undefined || Sk.builtinFiles.files[f] === undefined) throw "File not found: '" + f + "'"; return Sk.builtinFiles.files[f]; },
+    __future__: Sk.python3, execLimit: 3000
+  });
+  try { await Sk.misceval.asyncToPromise(() => Sk.importMainWithBody('<stdin>', false, code, true)); return {out}; }
+  catch (e) { let msg = e.toString(); if (/TimeLimitError/.test(msg)) msg = 'Stopped after 3 seconds. A loop is probably never ending.'; return {out, err:msg}; }
+}
+function editorKeys(ta){
+  ta.addEventListener('keydown', e => {
+    if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); ta.setRangeText('    ', ta.selectionStart, ta.selectionEnd, 'end'); }
+    else if (e.key === 'Enter') {
+      const s = ta.selectionStart, before = ta.value.slice(0, s), line = before.slice(before.lastIndexOf('\n') + 1);
+      let ind = (line.match(/^ */) || [''])[0]; if (/:\s*$/.test(line)) ind += '    ';
+      e.preventDefault(); ta.setRangeText('\n' + ind, s, ta.selectionEnd, 'end');
+    }
+  });
+}
+
+/* ================= playground ================= */
+(() => {
+  const ind = c => c.replace(/^/gm, '    ');
+  const PUT = CODE.put + '\n    if self.count > len(self.buckets):\n        self.resize()';
+  const START = CODE.node + '\n\n\n' + [CODE.init, ...[CODE.hash, PUT, CODE.get, CODE.remove, CODE.resize].map(ind)].join('\n\n') + '\n';
+  const DUMP = `
+def _dump(t):
+    out = []
+    for head in t.buckets:
+        row = []
+        cur = head
+        while cur is not None:
+            row.append([str(cur.key), str(cur.value)])
+            cur = cur.next
+        out.append(row)
+    return str(out).replace("'", '"')
+`;
+  const ed = $('pgEd'); ed.value = START; editorKeys(ed);
+  const out = $('pgOut');
+  const log = html => { out.innerHTML += (out.innerHTML ? '\n' : '') + html; out.scrollTop = out.scrollHeight; };
+  const SEED = MENU.slice(0, 4).map(([k, v]) => ['put', k, v]);
+  let ops = SEED.slice();
+  const stmt = ([t, k, v]) => t === 'put' ? `_t.put("${k}", ${v})` : `_t.${t}("${k}")`;
+  const show = (B, nd) => { $('pgTab').innerHTML = tbl(B, {sm:B.length > 8, nd}); };
+  show(mkT(MENU.slice(0, 4)));
+  async function run(op){
+    const prog = ed.value + '\n' + DUMP + '_t = HashTable()\n' + ops.map(stmt).join('\n') + `\nprint("@@BEGIN")\n_r = ${op ? stmt(op) : 'None'}\nprint("@@R " + str(_r))\nprint("@@T " + _dump(_t))\n`;
+    $('pgStatus').textContent = window.Sk ? 'Running...' : 'Loading Python, this takes a moment the first time...';
+    let r;
+    try { r = await runPy(prog); }
+    catch (e) { $('pgStatus').textContent = ''; log(`<span class="err">${esc(e.message)}. Check your internet connection.</span>`); return; }
+    $('pgStatus').textContent = '';
+    if (op) log(`<b>${esc(stmt(op).slice(3))}</b>`);
+    const lines = r.out.split('\n'), b = lines.indexOf('@@BEGIN');
+    let ok = false;
+    lines.slice(b < 0 ? lines.length : b + 1).forEach(line => {
+      if (line.startsWith('@@R ')) { if (op && op[0] === 'get') log('returned ' + esc(line.slice(4))); }
+      else if (line.startsWith('@@T ')) { try { show(JSON.parse(line.slice(4)), op && op[0] !== 'remove' ? {[op[1]]:op[0] === 'put' ? 'new' : 'ok'} : {}); ok = true; } catch (e) {} }
+      else if (line !== '') log(esc(line));
+    });
+    if (r.err) log(`<span class="err">${esc(r.err)}</span>`);
+    if (ok && op && op[0] !== 'get') ops.push(op);
+  }
+  const key = () => { const k = cleanKey($('pgKey').value).trim(); $('pgKey').value = k; return k; };
+  const bind = (id, t) => { const b = $(id); b.onclick = async () => {
+    const k = key(); if (!k) { log('<span class="err">Type a key first</span>'); return; }
+    const v = Math.round(Number($('pgVal').value)) || 0;
+    b.disabled = true; await run(t === 'put' ? [t, k, v] : [t, k]); b.disabled = false; }; };
+  bind('pgPut', 'put'); bind('pgGet', 'get'); bind('pgRem', 'remove');
+  $('pgClear').onclick = () => { ops = []; show(mkT([])); out.innerHTML = ''; };
+  $('pgResetCode').onclick = () => { ed.value = START; };
+})();
+
+/* ================= navigation ================= */
+const slides = [...document.querySelectorAll('.slide')];
+let cur = 0;
+function goSlide(i){
+  i = Math.max(0, Math.min(slides.length - 1, i));
+  PLAYERS.forEach(p => p.pause());
+  slides[cur].classList.remove('on');
+  cur = i;
+  slides[cur].classList.add('on');
+  $('stage').scrollTop = 0;
+  $('cnt').textContent = `${cur+1} / ${slides.length}`;
+  $('ttl').textContent = slides[cur].dataset.title;
+  $('prev').disabled = cur === 0;
+  $('next').disabled = cur === slides.length - 1;
+  $('prog').style.width = ((cur + 1) / slides.length * 100) + '%';
+  try { history.replaceState(null, '', '#' + (cur + 1)); } catch (e) {}
+}
+$('prev').onclick = () => goSlide(cur - 1);
+$('next').onclick = () => goSlide(cur + 1);
+document.addEventListener('keydown', e => {
+  if (e.target.closest('input, textarea, select')) return;
+  if (e.key === 'ArrowRight' || e.key === 'PageDown') { e.preventDefault(); goSlide(cur + 1); }
+  else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); goSlide(cur - 1); }
+});
+const start = parseInt((location.hash || '').slice(1), 10);
+goSlide(Number.isFinite(start) ? start - 1 : 0);
+})();
+</script>
+<script>
+/* Phones: stop a fast double tap from zooming the page. The second tap still counts as a tap. */
+(() => {
+  let last = 0, sx = 0, sy = 0;
+  document.addEventListener('touchstart', e => {
+    if (e.touches.length === 1) { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }
+  }, { passive: true });
+  document.addEventListener('touchend', e => {
+    const now = Date.now(), t = e.target, c = e.changedTouches[0];
+    const still = Math.abs(c.clientX - sx) < 10 && Math.abs(c.clientY - sy) < 10;
+    if (e.cancelable && e.touches.length === 0 && still && now - last < 350 && t.closest && !t.closest('input, textarea, select, [contenteditable]')) {
+      e.preventDefault();
+      t.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window, clientX: c.clientX, clientY: c.clientY }));
+    }
+    last = now;
+  }, { passive: false });
+})();
+</script>
+</body>
+</html>
